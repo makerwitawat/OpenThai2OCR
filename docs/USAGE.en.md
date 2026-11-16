@@ -33,7 +33,11 @@ Accepted: PNG, JPG/JPEG, BMP, TIF/TIFF, WEBP, PDF (every page).
 - Left = the image with line boxes and confidence scores (top-left of each box)
 - Right = the text in reading order (2–3 column pages supported)
 - Multiple files/pages → tabs below the image
-- Buttons: **Copy** / **Download .txt**
+- Buttons: **Copy** / **.txt** / **.pdf** / **.csv** / **.json**
+  - `.pdf` = **searchable PDF** (an invisible text layer over the image)
+  - `.csv` = lines with confidence and box coordinates (opens in Excel)
+  - `.json` = full result for downstream use
+- Multi-page PDFs: a progress bar ("Page x/y") and a **Cancel** button while reading
 
 ## 4. Accuracy tuning
 
@@ -85,10 +89,26 @@ The "Image scale" selector above the OCR button:
 | Only high-confidence lines | `rec.drop_below` 0.85–0.92 |
 | Too slow | Lower `det.limit` to ~960 or use 1× |
 
+### 4.4 Limits
+
+| Item | Default | Notes |
+|---|---|---|
+| Upload size | 100 MB | Larger files are rejected with a message |
+| PDF pages | 50 | Split the file if you need more |
+| Cached results | 5 | Used by the export buttons |
+| Port | 5000-5010 | Shifts automatically when busy |
+| Log file | `logs/openthai-ocr.log` | Rotating, 2 MB x 3 |
+
+> In LAN mode (`--host 0.0.0.0`) without `--api-key`, a random key is generated and shown in a dialog.
+> The web UI asks for it once, remembers it, and sends the `X-API-Key` header.
+
 ## 5. Page font size
 
 - `A−` / `A` / `A+` at the top right — remembered for next time
 - Default scale adapts to screen width automatically
+- **EN / ไทย** button switches the UI language (remembered)
+- **Quit** button (top right) stops the server - no Task Manager needed
+- Version is shown at the top right
 
 ## 6. Using it from other programs (API)
 

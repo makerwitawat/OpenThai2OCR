@@ -13,6 +13,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ("templates", "templates"),
+        ("assets", "assets"),
+        ("app.ico", "."),
         ("models/det.onnx", "models"),
         ("models/rec.onnx", "models"),
         ("models/rec_dict.txt", "models"),

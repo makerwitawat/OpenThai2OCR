@@ -47,10 +47,21 @@ python tools/release-notes-patch.py v1.0.0 notes.md --repo <owner>/<repo>
 gh release upload v1.0.0 dist/OpenThai2OCR-linux-x64 --clobber
 ```
 
-## โมเดล
+## ทดสอบก่อน build
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q          # ทดสอบ API 7 เคส
+python tools/smoke_test.py   # ทดสอบอ่านภาพจริง
+```
+
+## โมเดลและ asset
 
 ไฟล์โมเดลอยู่ใน `models/` (det.onnx, rec.onnx, rec_dict.txt, config.json)
 และสเปก onefile ฝังไฟล์เหล่านี้เข้า exe อัตโนมัติ
+
+โฟลเดอร์ `assets/` มีฟอนต์ `NotoSansThai-Regular.ttf` (OFL) สำหรับ PDF ที่ค้นหาได้
+— สเปกฝังให้เช่นกัน
 
 ดาวน์โหลด/อัปเดตโมเดลใหม่จาก Hugging Face:
 

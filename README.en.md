@@ -14,7 +14,11 @@ with a Thai/English web UI, clipboard paste, a JSON API for other programs, and 
 - **Multiple files / pages** — several images or a multi-page PDF, results in tabs
 - **Boxes on the image** — each line is outlined with its confidence score
 - **Font size follows the screen** — `A− A A+` buttons, remembered in the browser
-- **Ready-to-use API** — multipart or JSON base64, CORS enabled, examples in 8 languages
+- **Progress + cancel** — know which page a long PDF is on and stop mid-way
+- **Exports** — searchable PDF, CSV (Excel-friendly), JSON, TXT
+- **Ready-to-use API** — multipart / JSON base64 / background jobs, CORS enabled, 8 language examples
+- **Basic safety** — 100 MB / 50 page limits, optional API key for LAN mode, log file
+- **Thai/English UI toggle** — EN/ไทย button (remembered) plus an in-app Quit button
 - **No GPU required** — ONNX Runtime on CPU, roughly 0.1–0.5 s per A4 page
 - **A single file** — `OpenThai2OCR.exe` embeds the model; or build your own on Linux/macOS
 
@@ -63,7 +67,7 @@ $res = json_decode(curl_exec($ch), true);
 echo $res['text'];
 ```
 
-Full details (JSON base64, `scale`, `settings`, examples in 8 languages) → [docs/API.en.md](docs/API.en.md)
+Full details (JSON base64, jobs/progress, exports, API key, `scale`/`settings`) → [docs/API.en.md](docs/API.en.md)
 
 ## Documentation
 

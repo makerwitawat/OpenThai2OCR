@@ -51,9 +51,19 @@ gh release upload v1.0.0 dist/OpenThai2OCR-linux-x64 --clobber
 > ASCII notes, then run `tools/release-notes-patch.py` (UTF-8 via GitHub API) and verify the
 > `.checked` file with an editor.
 
-## Models
+## Test before building
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q          # 7 API tests
+python tools/smoke_test.py   # real OCR smoke test
+```
+
+## Models and assets
 
 `models/` holds `det.onnx`, `rec.onnx`, `rec_dict.txt`, `config.json`. The onefile spec embeds them.
+
+`assets/` holds `NotoSansThai-Regular.ttf` (OFL) used for the searchable PDF export — also embedded.
 
 Download/refresh from Hugging Face:
 

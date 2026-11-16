@@ -20,7 +20,15 @@
 ### `GET /api/health`
 
 ```json
-{"ok": true, "model_dir": "D:\\...\\models", "model_ready": true}
+{
+  "ok": true,
+  "app": "openthai2ocr",
+  "version": "1.1.0",
+  "model_dir": "D:\\...\\models",
+  "model_ready": true,
+  "auth_required": false,
+  "limits": {"max_upload_mb": 100, "max_pages": 50}
+}
 ```
 
 ### `POST /api/ocr` — แนบไฟล์ (multipart, ชื่อ field = `file`)
@@ -95,6 +103,68 @@ multipart ใส่ `images=0`, `scale=2`, `settings={"rec":{...}}` เป็น
 | `rec.junk_below`, `rec.junk_invalid` | ตัดข้อความขยะ/สะกดเพี้ยน | 0–1 |
 | `rec.batch` | จำนวนบรรทัดต่อรอบ | 1–64 |
 | `rec.color` | `flatten` (ค่าเริ่มต้น), `gray`, `gray_inv`, `stretch`, `bgr` | — |
+
+### `POST /api/jobs` — งานเบื้องหลัง (มี progress + ยกเลิก)
+
+ใช้เมื่อไฟล์เป็น PDF หลายหน้า หรืออยากให้หน้าเว็บแสดงความคืบหน้า
+รับ payload เหมือน `/api/ocr` ทุกอย่าง (multipart หรือ JSON base64)
+
+```json
+{"ok": true, "job_id": "06ee616b67186519", "total": 3}
+```
+
+### `GET /api/jobs/<job_id>`
+
+```json
+{"ok": true, "job_id": "...", "status": "running",
+ "progress": {"done": 1, "total": 3}, "error": ""}
+```
+
+`status`: `queued` → `running` → `done` | `error` | `cancelled`
+เมื่อ `done` จะมี `pages`, `text`, `result_id` ให้ใช้ต่อได้
+
+### `POST /api/jobs/<job_id>/cancel`
+
+```json
+{"ok": true}
+```
+
+ยกเลิกระหว่างอ่านได้ (หยุดที่ขอบเขตหน้าถัดไป)
+
+### `GET /api/result/<result_id>/export?format=pdf|csv|json|txt`
+
+ดาวน์โหลดผลลัพธ์ (เก็บผลล่าสุด 5 รายการ)
+
+- `pdf` = PDF ที่ค้นหาข้อความได้ (text layer ซ่อนเหนือภาพ)
+- `csv` = บรรทัด + confidence + พิกัดกรอบ (UTF-8 BOM เปิด Excel ได้)
+- `json` = ผลเต็ม (ไม่มีภาพประกอบ)
+- `txt` = ข้อความล้วน
+
+```bash
+curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
+```
+
+### `POST /api/shutdown`
+
+ปิดโปรแกรมจากเครื่องตัวเองเท่านั้น (ใช้โดยปุ่ม "ปิดโปรแกรม" ในหน้าเว็บ)
+
+### Authentication (เมื่อเปิด `--api-key`)
+
+ส่ง header `X-API-Key: <key>` (หรือ `?key=<key>`) กับทุก `/api/*`
+ยกเว้น `/api/health`, `/`, `/favicon.ico`
+
+```bash
+curl -H "X-API-Key: secret123" -F "file=@page.png" http://127.0.0.1:5000/api/ocr
+```
+
+### ขีดจำกัด
+
+| รายการ | ค่า |
+|---|---|
+| ขนาดอัปโหลด | 100 MB (`413`) |
+| จำนวนหน้า PDF | 50 (`400`) |
+| ผลลัพธ์ที่เก็บ | 5 รายการ (เกินแล้วให้ประมวลผลใหม่) |
+| การประมวลผล | ทีละคำขอ (คำขออื่นเข้าคิว) |
 
 ## ตัวอย่าง PHP
 

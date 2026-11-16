@@ -20,7 +20,15 @@ It listens on `127.0.0.1:5000` by default (this machine only).
 ### `GET /api/health`
 
 ```json
-{"ok": true, "model_dir": "D:\\...\\models", "model_ready": true}
+{
+  "ok": true,
+  "app": "openthai2ocr",
+  "version": "1.1.0",
+  "model_dir": "D:\\...\\models",
+  "model_ready": true,
+  "auth_required": false,
+  "limits": {"max_upload_mb": 100, "max_pages": 50}
+}
 ```
 
 ### `POST /api/ocr` — file upload (multipart, field name `file`)
@@ -95,6 +103,68 @@ For multipart, send `images=0`, `scale=2`, `settings={"rec":{...}}` as form fiel
 | `rec.junk_below`, `rec.junk_invalid` | drop junk / badly spelled lines | 0–1 |
 | `rec.batch` | lines per forward pass | 1–64 |
 | `rec.color` | `flatten` (default), `gray`, `gray_inv`, `stretch`, `bgr` | — |
+
+### `POST /api/jobs` — background job (progress + cancel)
+
+Use this for multi-page PDFs or when you want progress reporting.
+It accepts the same payloads as `/api/ocr` (multipart or JSON base64).
+
+```json
+{"ok": true, "job_id": "06ee616b67186519", "total": 3}
+```
+
+### `GET /api/jobs/<job_id>`
+
+```json
+{"ok": true, "job_id": "...", "status": "running",
+ "progress": {"done": 1, "total": 3}, "error": ""}
+```
+
+`status`: `queued` -> `running` -> `done` | `error` | `cancelled`
+When `done`, the response includes `pages`, `text`, and `result_id`.
+
+### `POST /api/jobs/<job_id>/cancel`
+
+```json
+{"ok": true}
+```
+
+Stops between pages.
+
+### `GET /api/result/<result_id>/export?format=pdf|csv|json|txt`
+
+Downloads the result (the last 5 results are kept).
+
+- `pdf` = searchable PDF (invisible text layer over the image)
+- `csv` = lines + confidence + box coordinates (UTF-8 BOM, opens in Excel)
+- `json` = full result (no images)
+- `txt` = plain text
+
+```bash
+curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
+```
+
+### `POST /api/shutdown`
+
+Stops the app, localhost only (used by the web UI "Quit" button).
+
+### Authentication (when `--api-key` is set)
+
+Send `X-API-Key: <key>` (or `?key=<key>`) on every `/api/*` call,
+except `/api/health`, `/`, and `/favicon.ico`.
+
+```bash
+curl -H "X-API-Key: secret123" -F "file=@page.png" http://127.0.0.1:5000/api/ocr
+```
+
+### Limits
+
+| Item | Value |
+|---|---|
+| Upload size | 100 MB (`413`) |
+| PDF pages | 50 (`400`) |
+| Cached results | 5 (re-run when exceeded) |
+| Processing | one request at a time (others queue) |
 
 ## PHP
 

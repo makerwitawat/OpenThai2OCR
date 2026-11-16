@@ -48,6 +48,38 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 - รัน dev: `python app.py` (หรือ `run_web.bat`) · build exe: `build_exe.bat`
 - ทดสอบ: `python tools/smoke_test.py`
 
+## Session 2 (v1.1.0 — ปิดช่องโหว่ + UI 2 ภาษา) — 2026-11-16
+
+## Objective
+ปิดช่องโหว่ที่ขาด (limits/log/instance/quit/auth/progress) + export (PDF ค้นหาได้/CSV/JSON) + UI 2 ภาษา
+
+## Completed (+commit)
+- logging หมุนเวียน `logs/openthai-ocr.log` + แสดง path/version ใน health
+- จำกัด 100 MB และ PDF 50 หน้า + error 413/400 ชัดเจน
+- single-instance (เปิดซ้ำ → เปิดเบราว์เซอร์เดิม) + เลื่อนพอร์ต 5000–5010
+- ปุ่มปิดโปรแกรม + `POST /api/shutdown` (เฉพาะเครื่องตัวเอง)
+- API key (`--api-key` / สุ่มอัตโนมัติในโหมด LAN) + UI ถาม key ครั้งแรก
+- `POST /api/jobs`, `GET /api/jobs/<id>`, cancel → progress bar + ยกเลิกใน UI
+- export: PDF ค้นหาได้ (TextWriter + Noto Sans Thai OFL), CSV (UTF-8 BOM), JSON, TXT
+- UI: สลับ ไทย/EN (localStorage), lightbox, rerun อัตโนมัติเมื่อเปลี่ยน scale, favicon, version, ปุ่ม export
+- tests: `tests/test_api.py` 7 เคส (ผ่าน) + CI รัน pytest ทุก OS
+- เอกสาร 2 ภาษา + CHANGELOG v1.1.0 อัปเดตครบ
+
+## ข้อควรระวังที่เจอ
+- PDF text layer: ต้องใช้ `pymupdf.TextWriter` (insert_text + fontfile ให้ข้อความสกัดได้เป็น \x00)
+- PyInstaller onefile: ต้อง exclude torch/CUDA (ถ้าไม่ exclude exe ใหญ่ 2.5GB)
+- อย่าลืม `taskkill /IM OpenThai2OCR.exe /F` ก่อน build (ไฟล์ exe ถูกล็อก)
+
+## Active
+- ไม่มี — exe v1.1.0 `dist/OpenThai2OCR.exe` (116.3 MB) ทดสอบแล้วครบ (jobs/export/shutdown)
+
+## Blocked
+- อ่านภาพโดยตรงไม่ได้ (ต้องตรวจผ่านโค้ด/CLI)
+
+## Next Move
+- release v1.1.0 (tag) → รอ CI → patch SHA table
+- ถ้าต้องการต่อ: line-level copy, watch folder, DOCX export, code signing
+
 ## commit ล่าสุด
 - `94990d9` (ci: fix artifact rename on unix and keep release body)
 - version: v1.0.0 (tag ทดสอบผ่านทั้ง 3 OS)
