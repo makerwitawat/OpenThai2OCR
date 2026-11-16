@@ -120,7 +120,7 @@ def test_watch_folder(tmp_path, monkeypatch, sample_png):
     assert (out / "doc-ocr.txt").read_text(encoding="utf-8").strip()
     assert (out / "doc-ocr.docx").read_bytes()[:2] == b"PK"
     assert (out / "doc-ocr.json").exists()
-assert web._watch_scan() == []  # unchanged file is not processed twice
+    assert web._watch_scan() == []  # unchanged file is not processed twice
 
 
 def test_pages_render(client):
