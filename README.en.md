@@ -42,6 +42,13 @@ python app.py --host 0.0.0.0 --port 8080   # allow other machines on the LAN
 python app.py --watch "D:\inbox"           # OCR new files dropped into a folder
 ```
 
+Config: put keys in `settings.json` (next to the exe or `%LOCALAPPDATA%\OpenThai2OCR\`; see
+`settings.example.json`). Precedence: CLI flag > settings.json > built-in default; restart to apply.
+Keys: `host`, `port`, `port_tries`, `model_dir`, `log_dir`, `log_level`, `watch_dir`, `watch_out`,
+`watch_interval`, `max_upload_mb`, `max_pages`, `result_keep`, `max_edit_chars`, `server_threads`,
+`engine_threads`, `pdf_zoom`, `annotate_max_width`, `api_key`, `cors_origin`, `update_timeout`,
+`update_ttl_hours`. Invalid values are ignored with a warning in the log.
+
 ## Build an executable
 
 ```bat

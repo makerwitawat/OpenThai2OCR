@@ -2,6 +2,7 @@
 
 ## ยังไม่ปล่อย
 
+- **ตั้งค่าผ่าน `settings.json`** — host, port, path (โมเดล/log/watch), ขีดจำกัด (อัปโหลด/หน้า PDF/ผลลัพธ์), thread, ซูม PDF, API key, CORS, ค่าเช็กอัปเดต · ลำดับ flag CLI > settings.json > ค่าเริ่มต้น · ค่าที่ผิดถูกข้ามพร้อมเตือนใน log · เพิ่ม flag `--port-tries --log-dir --max-upload-mb --max-pages --threads --engine-threads` · `--port` ที่ไม่ใช่ตัวเลขไม่ crash แล้ว · แก้: ค่าเริ่มต้นไล่พอร์ตสำรอง 5000–5010 จริงตามข้อความ error (เดิมลองแค่ 5000) · URL เปิดตัวเองใช้ host ที่ตั้งไว้
 - **ภาพเต็มจอ (lightbox) แสดงกรอบ** — คลิกกรอบในภาพเต็มจอเพื่อเลือกบรรทัดได้ (ไฮไลต์ซิงก์กับภาพหลัก/ช่องข้อความ) · คลิกที่ว่างเพื่อปิด
 - **เอกสาร** — README เพิ่มหัวข้อ "ถ้า Windows / macOS เตือนตอนเปิดครั้งแรก" (วิธีเปิด + ตรวจ SHA256) · release notes v1.4.0 เพิ่มหมายเหตุไฟล์ยังไม่ได้เซ็น
 - **สคริปต์ .bat ปรับใหม่** — `build_exe.bat` / `build_exe_onedir.bat`: ติดตั้ง dependency → `pytest` → build → (onedir: คัดลอกโมเดล) → smoke test exe ที่ได้ (`tools/exe_smoke.py`) · `--skip-tests` ข้ามเทสต์ · ใช้ `.venv` ถ้ามี · `run_web.bat`: ตรวจ Python/dependency, ส่งอาร์กิวเมนต์ต่อให้ `app.py`, ไม่ฮาร์ดโค้ดพอร์ต · ข้อความเป็น ASCII อังกฤษล้วน (เดิมเป็น cp874 เพี้ยนบน Windows ที่ไม่ใช่ภาษาไทย)

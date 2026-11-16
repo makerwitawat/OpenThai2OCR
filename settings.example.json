@@ -1,0 +1,33 @@
+{
+  "start_mode": "browser",
+  "update_check": true,
+
+  "host": "127.0.0.1",
+  "port": 5000,
+  "port_tries": 11,
+
+  "model_dir": "models",
+  "log_dir": "logs",
+  "log_level": "INFO",
+
+  "watch_dir": "",
+  "watch_out": "",
+  "watch_interval": 5,
+
+  "max_upload_mb": 100,
+  "max_pages": 50,
+  "result_keep": 5,
+  "max_edit_chars": 2000000,
+
+  "server_threads": 8,
+  "engine_threads": 2,
+
+  "pdf_zoom": 1.6,
+  "annotate_max_width": 1200,
+
+  "api_key": "",
+  "cors_origin": "*",
+
+  "update_timeout": 5,
+  "update_ttl_hours": 6
+}

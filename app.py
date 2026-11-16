@@ -54,7 +54,15 @@ MAX_CONTENT_MB = 100
 MAX_PAGES = 50
 RESULT_KEEP = 5
 LOG_DIR = BASE / "logs"
+LOG_LEVEL = "INFO"
+HOST = "127.0.0.1"
 PORT = 5000
+PORT_TRIES = 11  # ลองพอร์ต PORT .. PORT+PORT_TRIES-1 ถ้าพอร์ตแรกไม่ว่าง
+SERVER_THREADS = 8
+ENGINE_THREADS = 2
+PDF_ZOOM = 1.6
+ANNOTATE_MAX_WIDTH = 1200
+CORS_ORIGIN = "*"  # "" = ไม่ส่ง header CORS
 API_KEY = ""
 WATCH_DIR = ""
 WATCH_OUT = ""
@@ -118,6 +126,100 @@ def apply_start_mode(mode: str) -> None:
     OPEN_BROWSER = mode == "browser"
 
 
+# ---------------------------------------------------------------- config (settings.json)
+# key ใน settings.json -> (ชนิด, ต่ำสุด/ตัวเลือก, สูงสุด, ชื่อตัวแปร global, ตัวคูณ)
+# ลำดับความสำคัญ: flag CLI > settings.json > ค่าเริ่มต้นในโค้ด
+# ค่าที่ผิดชนิด/เกินช่วงจะถูกข้ามพร้อมคำเตือนใน log (ใช้ค่าเริ่มต้นแทน)
+CONFIG_SCHEMA: dict[str, tuple] = {
+    "host": ("str", None, None, "HOST", 1),
+    "port": ("int", 1, 65535, "PORT", 1),
+    "port_tries": ("int", 1, 100, "PORT_TRIES", 1),
+    "model_dir": ("path", None, None, "MODEL_DIR", 1),
+    "log_dir": ("path", None, None, "LOG_DIR", 1),
+    "log_level": ("choice", ("DEBUG", "INFO", "WARNING", "ERROR"), None, "LOG_LEVEL", 1),
+    "watch_dir": ("pathstr", None, None, "WATCH_DIR", 1),
+    "watch_out": ("pathstr", None, None, "WATCH_OUT", 1),
+    "watch_interval": ("float", 1.0, 3600.0, "WATCH_INTERVAL", 1),
+    "max_upload_mb": ("int", 1, 2048, "MAX_CONTENT_MB", 1),
+    "max_pages": ("int", 1, 2000, "MAX_PAGES", 1),
+    "result_keep": ("int", 1, 100, "RESULT_KEEP", 1),
+    "max_edit_chars": ("int", 1000, 100_000_000, "MAX_EDIT_CHARS", 1),
+    "server_threads": ("int", 1, 256, "SERVER_THREADS", 1),
+    "engine_threads": ("int", 1, 64, "ENGINE_THREADS", 1),
+    "pdf_zoom": ("float", 0.5, 6.0, "PDF_ZOOM", 1),
+    "annotate_max_width": ("int", 200, 8000, "ANNOTATE_MAX_WIDTH", 1),
+    "api_key": ("str", None, None, "API_KEY", 1),
+    "cors_origin": ("str", None, None, "CORS_ORIGIN", 1),
+    "update_timeout": ("float", 1.0, 60.0, "UPDATE_TIMEOUT", 1),
+    "update_ttl_hours": ("float", 0.1, 720.0, "UPDATE_TTL", 3600),
+}
+# key เดิมที่ใช้ผ่าน /api/prefs (ไม่ใช่ปัญหาถ้าเจอใน settings.json)
+_PREF_KEYS = {"start_mode", "open_browser", "update_check"}
+
+
+def _config_path(value: str, base: Path | None = None) -> Path:
+    """รองรับ ~ และ %VAR%; path แบบ relative อิงโฟลเดอร์ข้างโปรแกรม (BASE)
+    (flag CLI ส่ง base=โฟลเดอร์ปัจจุบันเข้ามาแทน)"""
+    p = Path(os.path.expandvars(value)).expanduser()
+    return p if p.is_absolute() else (base or BASE) / p
+
+
+def _coerce_config(key: str, raw, base: Path | None = None):
+    """แปลงค่าจาก settings.json / CLI ตาม schema — ผิดก็ raise ValueError"""
+    kind, lo, hi, _name, scale = CONFIG_SCHEMA[key]
+    if kind in ("int", "float"):
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            raise ValueError("ต้องเป็นตัวเลข")
+        value = int(raw) if kind == "int" and float(raw).is_integer() else raw
+        if kind == "int" and not isinstance(value, int):
+            raise ValueError("ต้องเป็นจำนวนเต็ม")
+        if not lo <= value <= hi:
+            raise ValueError(f"ต้องอยู่ระหว่าง {lo}–{hi}")
+        return float(value) * scale if kind == "float" else value
+    if not isinstance(raw, str):
+        raise ValueError("ต้องเป็นข้อความ")
+    if kind == "choice":
+        value = raw.strip().upper()
+        if value not in lo:
+            raise ValueError("ต้องเป็น " + " | ".join(lo))
+        return value
+    if kind == "path":
+        if not raw.strip():
+            raise ValueError("path ว่างไม่ได้")
+        return _config_path(raw.strip(), base)
+    if kind == "pathstr":
+        return str(_config_path(raw.strip(), base)) if raw.strip() else ""
+    if key == "host" and not raw.strip():
+        raise ValueError("host ว่างไม่ได้")
+    return raw.strip() if key == "host" else raw
+
+
+def apply_config(prefs: dict | None = None) -> list[str]:
+    """อ่านค่าตั้งจาก settings.json มาใส่ตัวแปร global; คืนรายการคำเตือน (ค่าที่ใช้ไม่ได้)"""
+    prefs = load_prefs() if prefs is None else prefs
+    warnings: list[str] = []
+    for key, raw in prefs.items():
+        if key not in CONFIG_SCHEMA:
+            if key not in _PREF_KEYS:
+                warnings.append(f"settings.json: ไม่รู้จัก key '{key}' (ข้าม)")
+            continue
+        try:
+            value = _coerce_config(key, raw)
+        except (ValueError, TypeError) as exc:
+            warnings.append(f"settings.json: '{key}'={raw!r} ใช้ไม่ได้ — {exc} (ใช้ค่าเริ่มต้น)")
+            continue
+        globals()[CONFIG_SCHEMA[key][3]] = value
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_MB * 1024 * 1024
+    return warnings
+
+
+def _local_host(host: str) -> str:
+    """host ที่ใช้เรียกตัวเองจากเครื่องนี้ (0.0.0.0 / :: เรียกตรง ๆ ไม่ได้)"""
+    if host in ("", "0.0.0.0", "::", "localhost"):
+        return "127.0.0.1"
+    return f"[{host}]" if ":" in host and not host.startswith("[") else host
+
+
 def setup_logging(level: str = "INFO") -> Path | None:
     log.setLevel(getattr(logging, level.upper(), logging.INFO))
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
@@ -156,14 +258,17 @@ def get_engine():
             if _engine is None:
                 sys.path.insert(0, str(BASE))
                 from models.runtime.line_engine import LineOCR
-                _engine = LineOCR(str(MODEL_DIR), threads=2)
+                _engine = LineOCR(str(MODEL_DIR), threads=ENGINE_THREADS)
                 log.info("engine ready: %s", MODEL_DIR)
     return _engine
 
 
 # ---------------------------------------------------------------- image utils
-def pdf_to_images(data: bytes, zoom: float = 1.6, max_pages: int = MAX_PAGES):
+def pdf_to_images(data: bytes, zoom: float | None = None, max_pages: int | None = None):
     import pymupdf as fitz
+
+    zoom = PDF_ZOOM if zoom is None else zoom
+    max_pages = MAX_PAGES if max_pages is None else max_pages
 
     doc = fitz.open(stream=data, filetype="pdf")
     total = doc.page_count
@@ -196,8 +301,9 @@ def decode_image(data: bytes) -> np.ndarray:
     return img
 
 
-def annotate_image(img: np.ndarray, lines: list[dict], max_width: int = 1200, draw: bool = True) -> str:
+def annotate_image(img: np.ndarray, lines: list[dict], max_width: int | None = None, draw: bool = True) -> str:
     """draw=False → ส่งภาพเปล่า (หน้าเว็บวาดกรอบเองด้วย SVG เพื่อให้คลิกได้)"""
+    max_width = ANNOTATE_MAX_WIDTH if max_width is None else max_width
     img = img.copy()
     for ln in (lines if draw else []):
         box = np.array(ln["box"], dtype=np.int32)
@@ -537,9 +643,10 @@ def _guard():
 
 @app.after_request
 def add_cors(resp):
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-API-Key"
-    resp.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+    if CORS_ORIGIN:
+        resp.headers["Access-Control-Allow-Origin"] = CORS_ORIGIN
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-API-Key"
+        resp.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
     return resp
 
 
@@ -834,7 +941,7 @@ def _export_pdf(entry: dict) -> bytes:
         count = min(len(pages), len(entry["pages"]))
         for i in range(count):
             scale = float(entry["pages"][i].get("scale") or 1.0)
-            pix = pages[i].get_pixmap(matrix=fitz.Matrix(1.6 * scale, 1.6 * scale))
+            pix = pages[i].get_pixmap(matrix=fitz.Matrix(PDF_ZOOM * scale, PDF_ZOOM * scale))
             raw = np.frombuffer(pix.samples, np.uint8).reshape(pix.height, pix.width, pix.n)
             if pix.n == 4:
                 img = cv2.cvtColor(raw, cv2.COLOR_RGBA2BGR)
@@ -1123,12 +1230,12 @@ def _show_info(msg: str) -> None:
         pass
 
 
-def _existing_instance(ports) -> int | None:
+def _existing_instance(ports, host: str = "127.0.0.1") -> int | None:
     """หา instance ของแอปเราที่ **เวอร์ชันตรงกัน** เท่านั้น
     ถ้าเจอเวอร์ชันอื่น (เช่น instance เก่าค้างอยู่) จะข้ามไป ไม่ผูกต่อ"""
     for port in ports:
         try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=0.7) as resp:
+            with urllib.request.urlopen(f"http://{_local_host(host)}:{port}/api/health", timeout=0.7) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError):
             continue
@@ -1165,44 +1272,69 @@ def _open_window(url: str) -> bool:
     return True
 
 
-def main():
-    global MODEL_DIR, PORT, API_KEY, WATCH_DIR, WATCH_OUT, WATCH_INTERVAL, OPEN_BROWSER, START_MODE
-    host = "127.0.0.1"
-    ports = [PORT]
-    browser_override = None
-    args = sys.argv[1:]
-    log_level = "INFO"
-    for i, a in enumerate(args):
-        if a == "--model" and i + 1 < len(args):
-            MODEL_DIR = Path(args[i + 1])
-        elif a == "--port" and i + 1 < len(args):
-            base = int(args[i + 1])
-            ports = list(range(base, base + 11))
-        elif a == "--host" and i + 1 < len(args):
-            host = args[i + 1]
-        elif a == "--api-key" and i + 1 < len(args):
-            API_KEY = args[i + 1]
-        elif a == "--log-level" and i + 1 < len(args):
-            log_level = args[i + 1]
-        elif a == "--watch" and i + 1 < len(args):
-            WATCH_DIR = args[i + 1]
-        elif a == "--watch-out" and i + 1 < len(args):
-            WATCH_OUT = args[i + 1]
-        elif a == "--watch-interval" and i + 1 < len(args):
+# flag CLI -> key ใน CONFIG_SCHEMA (CLI ชนะ settings.json)
+CLI_FLAGS = {
+    "--model": "model_dir", "--port": "port", "--port-tries": "port_tries", "--host": "host",
+    "--api-key": "api_key", "--log-level": "log_level", "--log-dir": "log_dir",
+    "--watch": "watch_dir", "--watch-out": "watch_out", "--watch-interval": "watch_interval",
+    "--max-upload-mb": "max_upload_mb", "--max-pages": "max_pages",
+    "--threads": "server_threads", "--engine-threads": "engine_threads",
+}
+_CLI_MODES = {"--no-browser": "none", "--browser": "browser", "--window": "window"}
+
+
+def parse_cli(args: list[str]) -> tuple[dict, str | None, list[str]]:
+    """แปลง flag เป็น (ค่า config, โหมดเปิดแอป, ข้อความผิดพลาด) — ไม่แก้ global เอง"""
+    values: dict = {}
+    mode: str | None = None
+    errors: list[str] = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        i += 1
+        if a in _CLI_MODES:
+            mode = _CLI_MODES[a]
+        elif a in CLI_FLAGS:
+            key = CLI_FLAGS[a]
+            if i >= len(args):
+                errors.append(f"{a} ต้องมีค่าตามหลัง")
+                continue
+            raw = args[i]
+            i += 1
+            kind = CONFIG_SCHEMA[key][0]
             try:
-                WATCH_INTERVAL = max(1.0, float(args[i + 1]))
-            except ValueError:
-                pass
-        elif a == "--no-browser":
-            browser_override = "none"
-        elif a == "--browser":
-            browser_override = "browser"
-        elif a == "--window":
-            browser_override = "window"
+                if kind == "int":
+                    raw = int(raw)
+                elif kind == "float":
+                    raw = float(raw)
+                    if key == "watch_interval":
+                        raw = max(1.0, raw)
+                values[key] = _coerce_config(key, raw, Path.cwd())
+            except (ValueError, TypeError) as exc:
+                errors.append(f"{a} {args[i - 1]!r} ใช้ไม่ได้ — {exc}")
+        else:
+            errors.append(f"ไม่รู้จัก flag {a!r} (ข้าม)")
+    return values, mode, errors
+
+
+def main():
+    global PORT, API_KEY, OPEN_BROWSER, START_MODE
+    config_warnings = apply_config()
+    cli_values, browser_override, cli_errors = parse_cli(sys.argv[1:])
+    for key, value in cli_values.items():
+        globals()[CONFIG_SCHEMA[key][3]] = value
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_MB * 1024 * 1024
+    host = HOST
+    ports = list(range(PORT, min(PORT + PORT_TRIES, 65536)))
 
     apply_start_mode(browser_override or prefs_start_mode())
 
-    setup_logging(log_level)
+    setup_logging(LOG_LEVEL)
+    for msg in config_warnings + cli_errors:
+        log.warning(msg)
+    log.info("config: host=%s port=%d(+%d) model=%s log=%s upload<=%dMB pages<=%d threads=%d/%d",
+             host, PORT, PORT_TRIES - 1, MODEL_DIR, LOG_DIR, MAX_CONTENT_MB, MAX_PAGES,
+             SERVER_THREADS, ENGINE_THREADS)
     required = ["det.onnx", "rec.onnx", "rec_dict.txt", "config.json"]
     missing = [n for n in required if not (MODEL_DIR / n).exists()]
     if missing:
@@ -1210,9 +1342,10 @@ def main():
                     f"ตรวจสอบว่าโฟลเดอร์ models อยู่ข้าง ๆ ไฟล์โปรแกรม")
         return 1
 
-    running = _existing_instance(ports)
+    local = _local_host(host)
+    running = _existing_instance(ports, host)
     if running:
-        url = f"http://127.0.0.1:{running}/"
+        url = f"http://{local}:{running}/"
         log.info("already running on port %d (mode=%s)", running, START_MODE)
         if START_MODE == "window":
             _open_window(url)
@@ -1222,7 +1355,8 @@ def main():
 
     chosen = next((p for p in ports if _port_free(host, p)), None)
     if chosen is None:
-        _show_error("พอร์ต 5000–5010 ถูกใช้งานหมด\nกรุณาปิดโปรแกรมอื่นหรือรันด้วย --port อื่น")
+        _show_error(f"พอร์ต {ports[0]}–{ports[-1]} ถูกใช้งานหมด\n"
+                    f"กรุณาปิดโปรแกรมอื่นหรือรันด้วย --port อื่น (หรือตั้ง port ใน settings.json)")
         return 1
     PORT = chosen
 
@@ -1245,20 +1379,20 @@ def main():
         else:
             from waitress import serve as waitress_serve
             threading.Thread(
-                target=lambda: waitress_serve(app, host=host, port=PORT, threads=8),
+                target=lambda: waitress_serve(app, host=host, port=PORT, threads=SERVER_THREADS),
                 name="http-server", daemon=True).start()
             time.sleep(0.8)
             log.info("serving on %s:%d (window)", host, PORT)
-            _open_window(f"http://127.0.0.1:{PORT}/")
+            _open_window(f"http://{local}:{PORT}/")
             log.info("window closed — exiting")
             os._exit(0)
 
     if OPEN_BROWSER:
-        threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}/")).start()
+        threading.Timer(1.0, lambda: webbrowser.open(f"http://{local}:{PORT}/")).start()
 
     log.info("serving on %s:%d", host, PORT)
     from waitress import serve
-    serve(app, host=host, port=PORT, threads=8)
+    serve(app, host=host, port=PORT, threads=SERVER_THREADS)
     return 0
 
 

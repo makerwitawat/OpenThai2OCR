@@ -75,6 +75,29 @@ python app.py --watch "D:\inbox"           # เฝ้าโฟลเดอร�
 > ตั้งได้ในหน้าแรก และจำไว้ที่ `settings.json` (เขียนทั้งข้าง exe และ
 > `%LOCALAPPDATA%\OpenThai2OCR\settings.json` เพื่อให้ใช้ร่วมกันทุกที่วาง exe)
 
+### ตั้งค่าเอง (`settings.json`)
+
+ใส่ key ที่ต้องการลงใน `settings.json` (ข้าง exe หรือ `%LOCALAPPDATA%\OpenThai2OCR\`) — ดูตัวอย่างที่
+`settings.example.json` · **ลำดับความสำคัญ: flag CLI > settings.json > ค่าเริ่มต้น** · ต้องรีสตาร์ตโปรแกรมจึงมีผล
+ค่าที่ผิดชนิด/เกินช่วงจะถูกข้ามและเตือนใน log (`logs/openthai-ocr.log`) · path แบบ relative อิงโฟลเดอร์ข้างโปรแกรม
+(รองรับ `~` และ `%VAR%`) · ถ้าตั้ง `api_key` ในไฟล์ ให้ระวังสิทธิ์อ่านไฟล์นี้
+
+| key | flag CLI | ค่าเริ่มต้น | ความหมาย |
+|---|---|---|---|
+| `host` | `--host` | `127.0.0.1` | ที่อยู่ที่เปิดฟัง (`0.0.0.0` = ทั้ง LAN, ต้องมี `api_key`) |
+| `port` / `port_tries` | `--port` / `--port-tries` | `5000` / `11` | พอร์ตเริ่มต้น และจำนวนพอร์ตที่ลองไล่ถ้าไม่ว่าง |
+| `model_dir` | `--model` | `models/` | โฟลเดอร์โมเดล |
+| `log_dir` / `log_level` | `--log-dir` / `--log-level` | `logs/` / `INFO` | ที่เก็บ log และระดับ |
+| `watch_dir` / `watch_out` / `watch_interval` | `--watch` / `--watch-out` / `--watch-interval` | ว่าง / ว่าง / `5` | เฝ้าโฟลเดอร์ (วินาที ≥ 1) |
+| `max_upload_mb` | `--max-upload-mb` | `100` | ขนาดไฟล์อัปโหลดสูงสุด |
+| `max_pages` | `--max-pages` | `50` | จำนวนหน้า PDF สูงสุด |
+| `result_keep` / `max_edit_chars` | — | `5` / `2000000` | ผลลัพธ์ที่เก็บในหน่วยความจำ / ความยาวข้อความที่แก้ได้ |
+| `server_threads` / `engine_threads` | `--threads` / `--engine-threads` | `8` / `2` | thread ของเซิร์ฟเวอร์ / engine OCR |
+| `pdf_zoom` / `annotate_max_width` | — | `1.6` / `1200` | ซูมตอนแปลง PDF เป็นภาพ / ความกว้างสูงสุดของภาพที่ส่งกลับ |
+| `api_key` | `--api-key` | ว่าง | กำหนด API key (ว่าง = ไม่ตรวจ ยกเว้นเปิด LAN จะสุ่มให้) |
+| `cors_origin` | — | `*` | ค่า `Access-Control-Allow-Origin` (`""` = ปิด CORS) |
+| `update_timeout` / `update_ttl_hours` | — | `5` / `6` | timeout และอายุแคชของการเช็กอัปเดต |
+
 ### หน้าในเว็บ
 
 | หน้า | ใช้ทำอะไร |
