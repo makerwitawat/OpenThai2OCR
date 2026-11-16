@@ -37,7 +37,11 @@ jobs:
             macOS)   suffix="macos-$(uname -m)" ;;
           esac
           mkdir -p out
-          src=$(ls dist/OpenThai2OCR.exe dist/OpenThai2OCR 2>/dev/null | head -n 1)
+          src=""
+          for candidate in dist/OpenThai2OCR.exe dist/OpenThai2OCR; do
+            if [ -f "$candidate" ]; then src="$candidate"; break; fi
+          done
+          if [ -z "$src" ]; then echo "binary not found"; ls -l dist; exit 1; fi
           mv "$src" "out/OpenThai2OCR-$suffix"
           chmod +x "out/OpenThai2OCR-$suffix" 2>/dev/null || true
           ls -l out
@@ -60,5 +64,4 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
           fail_on_unmatched_files: true
