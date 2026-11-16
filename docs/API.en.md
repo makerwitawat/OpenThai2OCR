@@ -205,8 +205,8 @@ Asks the server to look up the latest version on GitHub Releases (cached 6 h, 5 
 Add `?force=1` to bypass the cache.
 
 ```json
-{"ok": true, "enabled": true, "current": "1.4.0", "latest": "1.4.0",
- "update_available": false, "url": "https://github.com/makerwitawat/OpenThai2OCR/releases/tag/v1.4.0",
+{"ok": true, "enabled": true, "current": "1.5.0", "latest": "1.5.0",
+ "update_available": false, "url": "https://github.com/makerwitawat/OpenThai2OCR/releases/tag/v1.5.0",
  "error": null}
 ```
 

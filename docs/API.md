@@ -205,8 +205,8 @@ curl -X POST -H "Content-Type: application/json" -d '{"text": "บรรทั�
 เพิ่ม `?force=1` เพื่อข้าม cache
 
 ```json
-{"ok": true, "enabled": true, "current": "1.4.0", "latest": "1.4.0",
- "update_available": false, "url": "https://github.com/makerwitawat/OpenThai2OCR/releases/tag/v1.4.0",
+{"ok": true, "enabled": true, "current": "1.5.0", "latest": "1.5.0",
+ "update_available": false, "url": "https://github.com/makerwitawat/OpenThai2OCR/releases/tag/v1.5.0",
  "error": null}
 ```
 

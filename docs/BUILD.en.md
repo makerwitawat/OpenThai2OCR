@@ -9,8 +9,8 @@ build_exe.bat          :: single file  dist\OpenThai2OCR.exe  (model embedded)
 build_exe_onedir.bat   :: folder       dist\OpenThai2OCR\      (faster startup)
 ```
 
-- **onefile** = easiest to distribute, but extracts to temp on every launch (first page ~2–8 s slower)
-- **onedir** = faster startup, but ships the whole folder (`_internal\` + `models\`)
+- **onefile** = easiest to distribute, but extracts to temp on every launch (window appears in ~2–3 s)
+- **onedir** = faster startup (~1 s), but ships the whole folder (`_internal\` + `models\`)
 
 Both scripts run these steps in order and stop at the first failure:
 

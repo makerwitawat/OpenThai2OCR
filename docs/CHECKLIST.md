@@ -22,6 +22,14 @@
 - [x] B6 `docs/API*.md`, `USAGE*.md`, `/docs` อัปเดต · CHANGELOG + release v1.4.0 (SHA กรอกแล้ว, `.checked` ตรวจแล้ว)
 - [x] DoD B: ทดสอบบนเบราว์เซอร์จริง + exe ที่ปล่อย (`dist/OpenThai2OCR.exe` = asset SHA `860d3230…9797`, 95 MB)
 
+## Phase D — v1.5.0 ✅ (ตั้งค่า + build เล็กลง + เปิดเร็ว)
+- [x] D1 `settings.json` ครบทุกค่า + หน้า `/settings` + `GET/POST /api/config` (local-only, ตรวจ Origin)
+- [x] D2 exe เล็กลง 105 → 87 MB (build ใน `.venv` สะอาด + ตัดแพ็กเกจที่ไม่ใช้)
+- [x] D3 แก้บั๊ก prefs เขียนทับกัน (`start_mode` หาย) · lightbox แสดงกรอบ · สคริปต์ .bat/CI smoke test
+- [x] D4 แก้เปิดช้า: `_existing_instance` ไล่ 11 พอร์ตรอ timeout (~8 วิ) → เช็ก bind ก่อน · โหมดหน้าต่างเปลี่ยน `sleep 0.8` เป็น `_wait_port`
+  - วัดจาก exe จริง: เซิร์ฟเวอร์พร้อม 9.7 → ~2 วิ (onefile) / 8.5 → ~0.6 วิ (onedir) · หน้าต่างขึ้น onefile 2.3–3.2 วิ
+- [x] D5 pytest 73 ตัวผ่าน · build onefile + onedir + smoke test ผ่าน · เอกสาร (CHANGELOG/BUILD/USAGE/API) อัปเดต
+
 ## Phase C — เซ็น exe (blocked: รอใบรับรอง .pfx)
 - [ ] ได้ใบรับรอง
 - [ ] ใส่ secrets `WINDOWS_PFX_BASE64`, `WINDOWS_PFX_PASSWORD`

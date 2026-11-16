@@ -29,7 +29,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_file
 
 APP_NAME = "openthai2ocr"
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 BUNDLE = Path(getattr(sys, "_MEIPASS", BASE)) if getattr(sys, "frozen", False) else BASE
@@ -1359,6 +1359,19 @@ def _port_free(host: str, port: int) -> bool:
             return False
 
 
+def _wait_port(host: str, port: int, timeout: float = 5.0) -> bool:
+    """รอจนมีคนรับ connection ที่พอร์ตนี้ (เซิร์ฟเวอร์พร้อม) หรือหมดเวลา"""
+    host = host.strip("[]")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.2):
+                return True
+        except OSError:
+            time.sleep(0.02)
+    return False
+
+
 def _open_window(url: str) -> bool:
     """Open the UI in a native window (WebView2 on Windows). Blocks until closed."""
     try:
@@ -1444,7 +1457,9 @@ def main():
         return 1
 
     local = _local_host(host)
-    running = _existing_instance(ports, host)
+    # ยิง health เฉพาะพอร์ตที่มีคนจับอยู่จริง — พอร์ตว่างบน Windows ต่อแล้วรอ timeout ทุกพอร์ต (11 พอร์ต ≈ 8 วิ)
+    busy_ports = [p for p in ports if not _port_free(host, p)]
+    running = _existing_instance(busy_ports, host) if busy_ports else None
     if running:
         url = f"http://{local}:{running}/"
         log.info("already running on port %d (mode=%s)", running, START_MODE)
@@ -1482,7 +1497,7 @@ def main():
             threading.Thread(
                 target=lambda: waitress_serve(app, host=host, port=PORT, threads=SERVER_THREADS),
                 name="http-server", daemon=True).start()
-            time.sleep(0.8)
+            _wait_port(local, PORT, 5.0)  # เดิม sleep 0.8 วิตายตัว — รอเท่าที่เซิร์ฟเวอร์ต้องใช้จริง
             log.info("serving on %s:%d (window)", host, PORT)
             _open_window(f"http://{local}:{PORT}/")
             log.info("window closed — exiting")

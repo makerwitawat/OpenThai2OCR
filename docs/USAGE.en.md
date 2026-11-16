@@ -184,6 +184,7 @@ See PHP / Python / JavaScript / C# / Java / Go / Ruby / PowerShell examples → 
 | "Windows protected your PC" | The exe is unsigned — More info → Run anyway |
 | "Model files not found" | onedir builds need the `models` folder beside the exe (onefile embeds it) |
 | Another machine cannot reach the API | Start with `--host 0.0.0.0` and allow the port in the firewall |
+| Slow to start | onefile extracts to temp on every launch (~2–3 s); the onedir build starts faster (~1 s) |
 | Very slow | Lower the scale / `det.limit`; close CPU-heavy apps |
 | Handwriting not recognised | This model targets printed text — use a VLM model for handwriting |
 | Thai garbled in another program | Make sure your client decodes the response as UTF-8 |
