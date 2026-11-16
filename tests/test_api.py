@@ -151,3 +151,15 @@ def test_prefs_roundtrip(client, tmp_path, monkeypatch):
     assert data["open_browser"] is False
     assert data["saved_open_browser"] is False
     assert client.post("/api/prefs", json={}).status_code == 400
+
+def test_prefs_start_mode(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(web, "SETTINGS_FILE", tmp_path / "settings.json")
+    monkeypatch.setattr(web, "FALLBACK_SETTINGS", tmp_path / "fallback.json")
+    web.apply_start_mode("browser")
+    res = client.post("/api/prefs", json={"start_mode": "window"}).get_json()
+    assert res["ok"] is True and res["start_mode"] == "window"
+    assert web.START_MODE == "window" and web.OPEN_BROWSER is False
+    data = client.get("/api/prefs").get_json()
+    assert data["start_mode"] == "window" and data["saved_start_mode"] == "window"
+    assert client.post("/api/prefs", json={"start_mode": "bogus"}).status_code == 400
+    web.apply_start_mode("browser")

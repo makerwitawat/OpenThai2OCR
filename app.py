@@ -60,6 +60,7 @@ WATCH_OUT = ""
 WATCH_INTERVAL = 5.0
 STARTED_AT = time.time()
 OPEN_BROWSER = True
+START_MODE = "browser"  # browser | window | none
 log = logging.getLogger(APP_NAME)
 
 
@@ -87,17 +88,33 @@ def load_prefs() -> dict:
 def save_prefs(updates: dict) -> dict:
     data = load_prefs()
     data.update(updates)
-    targets = [_settings_file(writable=True)]
-    if targets[0] != FALLBACK_SETTINGS:
-        targets.append(FALLBACK_SETTINGS)
+    targets = [FALLBACK_SETTINGS]
+    if SETTINGS_FILE not in targets:
+        targets.append(SETTINGS_FILE)
     for path in targets:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-            return data
         except OSError:
             log.warning("cannot write settings: %s", path)
     return data
+
+
+def prefs_start_mode() -> str:
+    """browser | window | none — honours the old `open_browser` flag too."""
+    prefs = load_prefs()
+    mode = prefs.get("start_mode")
+    if mode in ("browser", "window", "none"):
+        return mode
+    return "browser" if prefs.get("open_browser", True) else "none"
+
+
+def apply_start_mode(mode: str) -> None:
+    global START_MODE, OPEN_BROWSER
+    if mode not in ("browser", "window", "none"):
+        return
+    START_MODE = mode
+    OPEN_BROWSER = mode == "browser"
 
 
 def setup_logging(level: str = "INFO") -> Path | None:
@@ -551,21 +568,29 @@ def status_page():
 @app.get("/api/prefs")
 def api_prefs_get():
     prefs = load_prefs()
-    return jsonify({"ok": True, "open_browser": OPEN_BROWSER,
+    return jsonify({"ok": True, "start_mode": START_MODE,
+                    "open_browser": OPEN_BROWSER,
+                    "saved_start_mode": prefs.get("start_mode"),
                     "saved_open_browser": prefs.get("open_browser")})
 
 
 @app.post("/api/prefs")
 def api_prefs_set():
-    global OPEN_BROWSER
+    global OPEN_BROWSER, START_MODE
     body = request.get_json(silent=True) or {}
     updated = {}
-    if "open_browser" in body:
+    if "start_mode" in body:
+        if body["start_mode"] not in ("browser", "window", "none"):
+            return jsonify({"ok": False, "error": "start_mode ต้องเป็น browser | window | none"}), 400
+        updated["start_mode"] = body["start_mode"]
+        updated["open_browser"] = body["start_mode"] == "browser"
+    elif "open_browser" in body:
         updated["open_browser"] = bool(body["open_browser"])
+        updated["start_mode"] = "browser" if updated["open_browser"] else "none"
     if not updated:
         return jsonify({"ok": False, "error": "ไม่มีค่าที่จะบันทึก"}), 400
     save_prefs(updated)
-    OPEN_BROWSER = updated.get("open_browser", OPEN_BROWSER)
+    apply_start_mode(updated["start_mode"])
     log.info("prefs updated: %s", updated)
     return jsonify({"ok": True, **updated})
 
@@ -583,6 +608,7 @@ def api_status():
                     "model_dir": str(MODEL_DIR), "model_ready": all(
                         (MODEL_DIR / n).exists() for n in ("det.onnx", "rec.onnx", "rec_dict.txt", "config.json")),
                     "auth_required": bool(API_KEY), "open_browser": OPEN_BROWSER,
+                    "start_mode": START_MODE,
                     "watch": {"dir": WATCH_DIR or None, "out": WATCH_OUT or None,
                               "interval": WATCH_INTERVAL if WATCH_DIR else None},
                     "limits": {"max_upload_mb": MAX_CONTENT_MB, "max_pages": MAX_PAGES},
@@ -962,12 +988,23 @@ def _port_free(host: str, port: int) -> bool:
             return False
 
 
+def _open_window(url: str) -> bool:
+    """Open the UI in a native window (WebView2 on Windows). Blocks until closed."""
+    try:
+        import webview
+    except Exception:
+        log.exception("pywebview is not installed")
+        return False
+    webview.create_window("OpenThai2.0 OCR", url, width=1280, height=880, min_size=(900, 600))
+    webview.start()
+    return True
+
+
 def main():
-    global MODEL_DIR, PORT, API_KEY, WATCH_DIR, WATCH_OUT, WATCH_INTERVAL, OPEN_BROWSER
+    global MODEL_DIR, PORT, API_KEY, WATCH_DIR, WATCH_OUT, WATCH_INTERVAL, OPEN_BROWSER, START_MODE
     host = "127.0.0.1"
     ports = [PORT]
     browser_override = None
-    OPEN_BROWSER = bool(load_prefs().get("open_browser", True))
     args = sys.argv[1:]
     log_level = "INFO"
     for i, a in enumerate(args):
@@ -992,12 +1029,13 @@ def main():
             except ValueError:
                 pass
         elif a == "--no-browser":
-            browser_override = False
+            browser_override = "none"
         elif a == "--browser":
-            browser_override = True
+            browser_override = "browser"
+        elif a == "--window":
+            browser_override = "window"
 
-    if browser_override is not None:
-        OPEN_BROWSER = browser_override
+    apply_start_mode(browser_override or prefs_start_mode())
 
     setup_logging(log_level)
     required = ["det.onnx", "rec.onnx", "rec_dict.txt", "config.json"]
@@ -1009,9 +1047,12 @@ def main():
 
     running = _existing_instance(ports)
     if running:
-        log.info("already running on port %d — opening browser", running)
-        if OPEN_BROWSER:
-            webbrowser.open(f"http://127.0.0.1:{running}/")
+        url = f"http://127.0.0.1:{running}/"
+        log.info("already running on port %d (mode=%s)", running, START_MODE)
+        if START_MODE == "window":
+            _open_window(url)
+        elif OPEN_BROWSER:
+            webbrowser.open(url)
         return 0
 
     chosen = next((p for p in ports if _port_free(host, p)), None)
@@ -1026,11 +1067,29 @@ def main():
         _show_info(f"เปิดใช้งานใน LAN — สร้าง API key อัตโนมัติ:\n\n{API_KEY}\n\n"
                    f"ใช้ header X-API-Key หรือช่อง API key ในหน้าเว็บ\n(กำหนดเองได้ด้วย --api-key)")
 
-    if OPEN_BROWSER:
-        threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}/")).start()
-
     if WATCH_DIR:
         _start_watch()
+
+    if START_MODE == "window":
+        try:
+            import webview  # noqa: F401
+        except Exception:
+            log.warning("pywebview ไม่พร้อม — เปลี่ยนไปเปิดเบราว์เซอร์แทน")
+            START_MODE = "browser"
+            OPEN_BROWSER = True
+        else:
+            from waitress import serve as waitress_serve
+            threading.Thread(
+                target=lambda: waitress_serve(app, host=host, port=PORT, threads=8),
+                name="http-server", daemon=True).start()
+            time.sleep(0.8)
+            log.info("serving on %s:%d (window)", host, PORT)
+            _open_window(f"http://127.0.0.1:{PORT}/")
+            log.info("window closed — exiting")
+            os._exit(0)
+
+    if OPEN_BROWSER:
+        threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}/")).start()
 
     log.info("serving on %s:%d", host, PORT)
     from waitress import serve

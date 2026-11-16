@@ -219,8 +219,12 @@
     </label>
     <span class="hint" data-i18n="scaleHint">ภาพหน้าจอเล็ก/ตัวอักษรเล็ก ลองเพิ่มเป็น 2× จะอ่านแม่นขึ้น</span>
     <label class="check" title="มีผลตั้งแต่เปิดโปรแกรมครั้งถัดไป / Applies from the next start">
-      <input type="checkbox" id="openBrowser">
-      <span data-i18n="openBrowserLabel">เปิดเบราว์เซอร์อัตโนมัติเมื่อเริ่ม</span>
+      <span data-i18n="startModeLabel">เมื่อเริ่มโปรแกรม</span>
+      <select id="startMode">
+        <option value="window" data-i18n="modeWindow">เปิดหน้าต่างโปรแกรม (GUI)</option>
+        <option value="browser" data-i18n="modeBrowser">เปิดเบราว์เซอร์</option>
+        <option value="none" data-i18n="modeNone">ไม่เปิดอะไร (headless)</option>
+      </select>
     </label>
     <span class="authbar" id="authbar">
       <span data-i18n="apiKeyLabel">API key:</span>
@@ -302,7 +306,10 @@
       cancelledInfo: "ยกเลิกการประมวลผลแล้ว",
       cancelling: "กำลังยกเลิก…",
       navOcr: "OCR", navDocs: "สอนใช้ API", navPlay: "ทดสอบ API", navStatus: "สถานะ",
-      openBrowserLabel: "เปิดเบราว์เซอร์อัตโนมัติเมื่อเริ่ม",
+      startModeLabel: "เมื่อเริ่มโปรแกรม",
+      modeWindow: "เปิดหน้าต่างโปรแกรม (GUI)",
+      modeBrowser: "เปิดเบราว์เซอร์",
+      modeNone: "ไม่เปิดอะไร (headless)",
       prefSaved: "บันทึกแล้ว — มีผลเมื่อเปิดโปรแกรมครั้งถัดไป",
     },
     en: {
@@ -332,7 +339,10 @@
       cancelledInfo: "Processing cancelled",
       cancelling: "Cancelling…",
       navOcr: "OCR", navDocs: "API guide", navPlay: "API playground", navStatus: "Status",
-      openBrowserLabel: "Open browser on start",
+      startModeLabel: "On start",
+      modeWindow: "App window (GUI)",
+      modeBrowser: "Open in browser",
+      modeNone: "Don't open anything (headless)",
       prefSaved: "Saved — applies the next time the app starts",
     }
   };
@@ -446,22 +456,21 @@
     return res;
   }
 
-  /* ---------- prefs: open browser on start ---------- */
-  const openBrowserBox = document.getElementById("openBrowser");
+  /* ---------- prefs: how to open on start ---------- */
+  const modeSel = document.getElementById("startMode");
   fetch("/api/prefs").then(r => r.json()).then(d => {
-    if (d && d.ok) openBrowserBox.checked = !!d.open_browser;
+    if (d && d.ok) modeSel.value = d.start_mode;
   }).catch(() => {});
-  openBrowserBox.addEventListener("change", async () => {
+  modeSel.addEventListener("change", async () => {
     try {
       const res = await fetch("/api/prefs", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ open_browser: openBrowserBox.checked })
+        body: JSON.stringify({ start_mode: modeSel.value })
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "prefs");
       setStatus(t("prefSaved"));
     } catch (err) {
-      openBrowserBox.checked = !openBrowserBox.checked;
       setStatus(t("statusError") + ": " + err.message, true);
     }
   });

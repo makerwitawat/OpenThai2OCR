@@ -11,9 +11,11 @@
   ขอภาพผลลัพธ์, แสดงข้อความ + JSON + สรุปเวลา, คัดลอกคำสั่ง curl และดาวน์โหลดผลได้
 - **หน้า `/status`** — version, uptime, สถานะโมเดล, โหมด API key, ขีดจำกัด, watch folder
   และงาน OCR ล่าสุด 20 งาน (รีเฟรชเองทุก 3 วินาที)
-- **ไม่เปิดเบราว์เซอร์อัตโนมัติ (จำค่าได้)** — ช่องตั้งค่าในหน้าแรก บันทึกที่ `settings.json`
-  (ถ้าเขียนไม่ได้ → `%LOCALAPPDATA%\OpenThai2OCR\settings.json`), คำสั่ง `--browser` บังคับเปิด
-- **API ใหม่** — `GET /api/status`, `GET`/`POST /api/prefs`; `/api/health` เพิ่ม `uptime_s`
+- **ไม่ต้องเปิดเบราว์เซอร์ก็ได้** — เลือกได้ 3 โหมดในหน้าแรก (จำค่า): เปิดหน้าต่างโปรแกรม (GUI,
+  WebView2 ผ่าน pywebview) / เปิดเบราว์เซอร์ / ไม่เปิดอะไร · คำสั่ง `--window` / `--browser` / `--no-browser`
+  (CLI ชนะค่าที่จำ) · ค่าเก็บที่ `settings.json` + `%LOCALAPPDATA%\OpenThai2OCR\settings.json`
+- **ขนาดตัวอักษร (A− / A / A+)** มีทุกหน้า และใช้ค่าเดียวกัน (จำค่าไว้)
+- **API ใหม่** — `GET /api/status`, `GET`/`POST /api/prefs` (`start_mode`); `/api/health` เพิ่ม `uptime_s`
 - เมนูนำทางระหว่างหน้า (OCR / สอนใช้ API / ทดสอบ API / สถานะ) ทั้ง 4 หน้า
 
 ### ปรับปรุง

@@ -64,7 +64,8 @@ curl -X POST http://127.0.0.1:5000/api/prefs \
 
 | ฟิลด์ | ชนิด | คำอธิบาย |
 |---|---|---|
-| `open_browser` | bool | เปิดเบราว์เซอร์อัตโนมัติเมื่อเริ่มโปรแกรมครั้งถัดไป |
+| `start_mode` | string | `window` (หน้าต่างโปรแกรม) · `browser` (เบราว์เซอร์) · `none` (ไม่เปิดอะไร) — มีผลครั้งถัดไป |
+| `open_browser` | bool | แบบเก่า: `true` = `browser`, `false` = `none` |
 
 ### `POST /api/ocr` — แนบไฟล์ (multipart, ชื่อ field = `file`)
 

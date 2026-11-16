@@ -7,12 +7,14 @@
 <link rel="icon" href="/favicon.ico">
 <style>
   :root {
+    --scale: 1;
     --panel:#fff; --panel2:#f1f5f9; --border:#e2e8f0; --text:#0f172a;
     --muted:#64748b; --accent:#0f766e; --accent2:#14b8a6; --err:#dc2626;
     --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.05);
   }
+  html { font-size: calc(var(--scale) * clamp(15px, 1.15vw + 5px, 20px)); }
   * { box-sizing:border-box; }
-  body { margin:0; color:var(--text); min-height:100vh; font-size:15px;
+  body { margin:0; color:var(--text); min-height:100vh; font-size:1rem;
     font-family:"Segoe UI","Noto Sans Thai",Leelawadee UI,system-ui,sans-serif;
     background:linear-gradient(180deg,#f8fafc 0%,#eef4f7 55%,#f8fafc 100%); }
   header { display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; padding:.9rem 1.6rem;
@@ -32,6 +34,8 @@
   .head-actions button { border:1px solid var(--border); background:var(--panel); color:var(--text);
     border-radius:.5rem; padding:.4rem .6rem; cursor:pointer; font-size:.8rem; }
   .head-actions button:hover { border-color:var(--accent); color:var(--accent); }
+  .fs { display:flex; gap:.25rem; align-items:center; }
+  .fs button { width:2rem; height:2rem; padding:0; }
   .ver { color:var(--muted); font-size:.72rem; }
   main { max-width:60rem; margin:0 auto; padding:1.3rem 1.6rem 4rem; }
   .grid { display:grid; gap:.9rem; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); }
@@ -71,6 +75,11 @@
   </nav>
   <div class="head-actions">
     <button id="langBtn">EN</button>
+    <div class="fs">
+      <button id="fsMinus" title="A−">A−</button>
+      <button id="fsReset" title="A">A</button>
+      <button id="fsPlus" title="A+">A+</button>
+    </div>
     <button id="refreshBtn" data-th="รีเฟรช" data-en="Refresh">รีเฟรช</button>
     <span class="ver">v{{ version }}</span>
   </div>
@@ -92,7 +101,7 @@
       <div class="s" id="modelDir"></div></div>
     <div class="card"><div class="k" data-th="โหมดความปลอดภัย" data-en="Security mode">โหมดความปลอดภัย</div>
       <div class="v" id="auth">—</div>
-      <div class="s" data-th="API key · เปิดเบราว์เซอร์อัตโนมัติ" data-en="API key · open browser on start">API key · เปิดเบราว์เซอร์อัตโนมัติ</div></div>
+      <div class="s" id="startMode"></div></div>
     <div class="card"><div class="k" data-th="ขีดจำกัด" data-en="Limits">ขีดจำกัด</div>
       <div class="v" id="limits">—</div>
       <div class="s" id="results"></div></div>
@@ -152,6 +161,19 @@
 
   let last = null;
 
+  /* ---------- font scale (shared with the OCR page) ---------- */
+  const root = document.documentElement;
+  let scale = parseFloat(localStorage.getItem("ocrFontScale") || "1");
+  function applyScale() {
+    scale = Math.min(1.35, Math.max(0.85, Math.round(scale * 100) / 100));
+    root.style.setProperty("--scale", scale);
+    localStorage.setItem("ocrFontScale", scale);
+  }
+  document.getElementById("fsMinus").onclick = () => { scale -= 0.08; applyScale(); };
+  document.getElementById("fsPlus").onclick = () => { scale += 0.08; applyScale(); };
+  document.getElementById("fsReset").onclick = () => { scale = 1; applyScale(); };
+  applyScale();
+
   function fmtUptime(sec) {
     sec = Math.max(0, Math.round(sec));
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
@@ -173,6 +195,11 @@
     document.getElementById("modelDir").textContent = data.model_dir;
     document.getElementById("auth").textContent = data.auth_required ? t("yes") : t("no");
     document.getElementById("auth").className = "v " + (data.auth_required ? "bad" : "ok");
+    const modeNames = { window: lang === "th" ? "หน้าต่างโปรแกรม (GUI)" : "app window (GUI)",
+                        browser: lang === "th" ? "เบราว์เซอร์" : "browser",
+                        none: lang === "th" ? "ไม่เปิดอัตโนมัติ" : "no auto-open" };
+    document.getElementById("startMode").textContent =
+      (lang === "th" ? "เมื่อเริ่ม: " : "on start: ") + (modeNames[data.start_mode] || data.start_mode);
     document.getElementById("limits").textContent =
       `${data.limits.max_upload_mb} ${t("mb")} · ${data.limits.max_pages} ${t("pages")}`;
     document.getElementById("results").textContent =

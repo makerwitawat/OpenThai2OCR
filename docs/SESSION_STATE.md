@@ -209,3 +209,51 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 ## commit ล่าสุด
 - `a6d2696` (docs: fill v1.2.0 SHA256 table and session state)
 - version: 1.3.0 (ในโค้ด) — ยังไม่ tag/release
+
+## Session 6 (v1.3.0 — โหมดหน้าต่างโปรแกรม + สเกลฟอนต์ทุกหน้า + แก้ทำไมยังเปิดเบราว์เซอร์) — 2026-11-16
+
+## Objective
+ตอบปัญหา "รันแล้วยังเปิดเบราว์เซอร์" และเพิ่มโหมด GUI (หน้าต่างโปรแกรม) + ปุ่ม A− A A+ ให้ครบทุกหน้า
+
+## สาเหตุที่ยังเปิดเบราว์เซอร์ (ตอบ user)
+- exe ที่ build ไว้ (v1.3.0) ยังเปิดเบราว์เซอร์เพราะ **ไม่พบ settings.json ข้าง exe**
+  (`dist\settings.json`) → ใช้ค่าเริ่มต้น = เปิดเบราว์เซอร์; ค่าที่เคยตั้งอยู่ใน `settings.json`
+  ของโฟลเดอร์โปรเจกต์ไม่ถูกอ่านเมื่อรัน exe (BASE = โฟลเดอร์ exe)
+- แก้: `save_prefs` เขียนทั้ง `settings.json` ข้าง exe และ `%LOCALAPPDATA%\OpenThai2OCR\settings.json`
+  และอ่านจากทั้งสองที่ → ตั้งครั้งเดียวใช้ได้ทุกตำแหน่งของ exe
+
+## Completed
+- **โหมด `--window` (GUI)** — pywebview + WebView2 เปิดหน้าต่างโปรแกรมจริง (ไม่ต้องมีเบราว์เซอร์)
+  · เซิร์ฟเวอร์ waitress รันเป็น thread, ปิดหน้าต่างแล้วจบโปรเซส (`os._exit`)
+  · ถ้ารันซ้ำตอนโปรแกรมทำงานอยู่ → เปิดหน้าต่างชี้ตัวที่รันอยู่
+  · ถ้าไม่มี pywebview → fallback เปิดเบราว์เซอร์ + log
+- **ตั้งค่า "เมื่อเริ่มโปรแกรม"** 3 โหมดในหน้าแรก (หน้าต่างโปรแกรม / เบราว์เซอร์ / ไม่เปิดอะไร)
+  → `POST /api/prefs {"start_mode": ...}` · CLI `--window` / `--browser` / `--no-browser` ชนะค่าที่จำ
+  · `/api/prefs` และ `/api/status` รายงาน `start_mode` · หน้า `/status` แสดงโหมด
+- **A− / A / A+ ทุกหน้า** (docs/playground/status) — ใช้ `html{font-size: calc(var(--scale)*clamp(...))}`
+  + localStorage `ocrFontScale` ค่าเดียวกับหน้าแรก
+- requirements เพิ่ม `pywebview>=5.0` · spec เพิ่ม hiddenimports (webview, edgechromium, winforms, clr, clr_loader)
+- tests: เพิ่มเคส start_mode (13 ผ่าน) · build exe ใหม่ทดสอบจริง:
+  `--window` เปิดหน้าต่าง title "OpenThai2.0 OCR" + /api/health ตอบ · ค่าที่จำไว้ (window) เปิดหน้าต่างให้เอง
+  เมื่อรันเปล่า ๆ · `--no-browser` ไม่มีหน้าต่าง (start_mode=none)
+
+## ข้อควรระวังที่เจอ
+- build เขียน `dist\OpenThai2OCR.exe` ไม่ได้ถ้า exe ตัวเก่ายังรันอยู่ (PermissionError) → build ลง
+  `--distpath dist_next` แล้วค่อยสลับไฟล์หลังปิดโปรแกรม
+- มี instance เก่าค้างพอร์ต 5000 ทำให้ exe ใหม่เปิดหน้าต่างไปหาตัวเก่า (API เก่า) → ตอนทดสอบใช้ `--port` แยก
+- `dist_next/` เพิ่มใน .gitignore
+
+## Active
+- **ต้องปิด exe เก่าที่ค้างอยู่ (PID 7720/15892, เปิดเมื่อ 16:00) แล้วเอา `dist_next\OpenThai2OCR.exe`
+  ไปแทน `dist\OpenThai2OCR.exe`** — ตอนนี้ยังแทนไม่ได้เพราะไฟล์ถูกล็อก
+
+## Blocked
+- code signing ยังไม่มีใบรับรอง · อ่านภาพโดยตรงไม่ได้
+
+## Next Move
+- แทนไฟล์ exe ใน dist (หลังปิดตัวเก่า) → ทดสอบซ้ำ → tag `v1.3.0` → release notes + patch SHA
+- ถ้าจะเซ็นจริง: ใส่ secret `WINDOWS_PFX_BASE64` + `WINDOWS_PFX_PASSWORD`
+
+## commit ล่าสุด
+- `ee81d18` (feat(v1.3.0): API guide, playground and status pages; remembered no-browser start)
+- version: 1.3.0 — ยังไม่ tag/release

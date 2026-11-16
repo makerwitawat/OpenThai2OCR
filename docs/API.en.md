@@ -64,7 +64,8 @@ curl -X POST http://127.0.0.1:5000/api/prefs \
 
 | Field | Type | Description |
 |---|---|---|
-| `open_browser` | bool | Open the browser automatically on the next start |
+| `start_mode` | string | `window` (app window) · `browser` · `none` — applies on the next start |
+| `open_browser` | bool | Legacy: `true` = `browser`, `false` = `none` |
 
 ### `POST /api/ocr` — file upload (multipart, field name `file`)
 

@@ -138,14 +138,27 @@ The "Image scale" selector above the OCR button:
 
 All pages share the **EN / ไทย** toggle (same language setting)
 
-## 5.2 Running without opening a browser
+## 5.2 Start modes (remembered)
 
-- One time: `OpenThai2OCR.exe --no-browser` (or `python app.py --no-browser`)
-- Remembered: untick **Open browser on start** on the first page → saved to `settings.json`
-  next to the executable (falls back to `%LOCALAPPDATA%\OpenThai2OCR\settings.json`)
-- Force it on again: `--browser`
+The first page has an **On start** selector with three modes (applies from the next start):
+
+| Mode | Equivalent flag | Behaviour |
+|---|---|---|
+| App window (GUI) | `--window` | A real desktop window (WebView2) — no browser needed |
+| Open in browser | `--browser` | Normal browser tab (default) |
+| Don't open anything (headless) | `--no-browser` | Runs quietly, open it yourself when ready |
+
+- The choice is saved to `settings.json` next to the app and to
+  `%LOCALAPPDATA%\OpenThai2OCR\settings.json` (shared across every exe location)
+- Command-line flags always override the saved value
+- Window mode needs `pywebview` (bundled in the exe / `pip install pywebview` from source)
 - Headless + watch folder:
   `OpenThai2OCR.exe --no-browser --watch "D:\inbox" --watch-out "D:\outbox"`
+
+## 5.3 Font size (every page)
+
+- `A−` / `A` / `A+` exist on every page (OCR / API guide / playground / status) and share one
+  value (stored in the browser's `localStorage` key `ocrFontScale`)
 
 ## 6. Using it from other programs (API)
 

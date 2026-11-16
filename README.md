@@ -38,11 +38,16 @@
 ```bash
 python -m pip install -r requirements.txt
 python app.py                # เปิด http://127.0.0.1:5000
-python app.py --no-browser   # ไม่เปิดเบราว์เซอร์ (จำค่าได้ในหน้าเว็บ)
+python app.py --window       # เปิดในหน้าต่างโปรแกรม (GUI, WebView2)
+python app.py --no-browser   # ไม่เปิดอะไร (headless — จำค่าได้ในหน้าเว็บ)
 python app.py --browser      # บังคับเปิดเบราว์เซอร์ (ข้ามค่าที่จำไว้)
 python app.py --host 0.0.0.0 --port 8080   # ให้เครื่องอื่นใน LAN เรียกได้
 python app.py --watch "D:\inbox"           # เฝ้าโฟลเดอร์ แล้วอ่านไฟล์ใหม่อัตโนมัติ
 ```
+
+> ค่าเริ่มต้นของ "เมื่อเริ่มโปรแกรม" (หน้าต่างโปรแกรม / เบราว์เซอร์ / ไม่เปิดอะไร)
+> ตั้งได้ในหน้าแรก และจำไว้ที่ `settings.json` (เขียนทั้งข้าง exe และ
+> `%LOCALAPPDATA%\OpenThai2OCR\settings.json` เพื่อให้ใช้ร่วมกันทุกที่วาง exe)
 
 ### หน้าในเว็บ
 

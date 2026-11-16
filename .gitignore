@@ -3,6 +3,7 @@
 logs/
 build/
 dist/
+dist_next/
 out/
 __pycache__/
 *.pyc

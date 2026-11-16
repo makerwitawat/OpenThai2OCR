@@ -5,6 +5,11 @@ from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = [
     "models.runtime.line_engine",
     "models.runtime.thai_norm",
+    "webview",
+    "webview.platforms.edgechromium",
+    "webview.platforms.winforms",
+    "clr",
+    "clr_loader",
 ] + collect_submodules("waitress")
 
 a = Analysis(
