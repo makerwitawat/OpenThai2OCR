@@ -83,3 +83,44 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 ## commit ล่าสุด
 - `f023ea4` (feat(v1.1.0): limits, logging, single-instance, API key, jobs/progress, exports, bilingual UI)
 - version: v1.1.0 — release ครบ 3 OS (windows/linux/macos) + SHA ใน notes แล้ว
+
+## Session 3 (v1.2.0 — คัดลอกบรรทัด + DOCX + watch folder + code signing) — 2026-11-16
+
+## Objective
+ทำครบ 4 ข้อที่ค้างจาก Next Move ของ Session 2 (line-level copy, watch folder, DOCX export, code signing)
+
+## Completed (+commit `3ad9b00`)
+- **คัดลอกทีละบรรทัด** — ปุ่ม "รายบรรทัด" (Lines) กางทุกบรรทัดของหน้าปัจจุบัน + %ความมั่นใจ,
+  คัดลอกทีละบรรทัด หรือ "คัดลอกทุกบรรทัด" · ใช้ `pages[i].lines` ที่มีอยู่ (หน้าบ้านล้วน)
+- **DOCX export** — `_export_docx` สร้าง OOXML เอง (zip + document/styles/[Content_Types]) ไม่เพิ่ม dependency,
+  บรรทัดละย่อหน้า, ฟอนต์ Leelawadee UI, รองรับหลายหน้า (หัวข้อ "หน้า N") + `format=docx` + ปุ่ม `.docx`
+- **watch folder** — `--watch DIR` / `--watch-out DIR` / `--watch-interval SEC`,
+  thread เฝ้าโฟลเดอร์ เขียน `<stem>-ocr.txt/.docx/.json`, ต้นฉบับไม่ถูกย้าย,
+  อ่านซ้ำเฉพาะเมื่อ size/mtime เปลี่ยน, ข้ามไฟล์ที่ยังเขียนไม่เสร็จ (อายุ < interval/2),
+  ล้าง state ไฟล์ที่ถูกลบ, error ไม่วน retry; `/api/health` มี `watch`
+- **code signing** — `tools/sign_exe.ps1` (หา signtool จาก PATH/Windows Kits, รองรับ
+  .pfx หรือ thumbprint, timestamp + verify /pa) + step ใน `release.yml` เปิดเมื่อมี
+  secret `WINDOWS_PFX_BASE64` (+`WINDOWS_PFX_PASSWORD`) — ไม่ตั้งก็ข้าม ไม่ทำให้ build ล้ม
+- **แก้บั๊กเดิม** — สลับภาษาแล้วสถานะ/ชื่อไฟล์ใน placeholder หาย (applyLang เขียนทับ textContent)
+- tests 9 เคสผ่าน (`test_docx_export`, `test_watch_folder`) · ตรวจ UI จริงด้วยเบราว์เซอร์ (อัปโหลด →
+  รายบรรทัด → คัดลอก → สลับภาษา → docx 200/PK) · ทดสอบ watch จริงบนพอร์ต 5100
+
+## ข้อควรระวังที่เจอ
+- Flask cache template ตอนรันแบบไม่ debug → แก้ `templates/index.html` ต้องรีสตาร์ตเซิร์ฟเวอร์ก่อนทดสอบ
+- ไฟล์ที่ watch ต้อง "นิ่ง" ก่อน (mtime เก่ากว่า interval/2) ไม่งั้นถูกข้ามในรอบแรก
+- DOCX ต้อง escape XML (&, <, >, ") ไม่งั้นไฟล์เสีย
+
+## Active
+- ไม่มี — โค้ด v1.2.0 พร้อม release แต่ยังไม่ build exe/tag
+
+## Blocked
+- code signing ยังไม่มีใบรับรองจริง → ทดสอบได้แค่ตัวสคริปต์/ขั้น CI (ยังไม่เซ็นจริง)
+- อ่านภาพโดยตรงไม่ได้ (ต้องตรวจผ่านโค้ด/CLI/เบราว์เซอร์)
+
+## Next Move
+- build exe v1.2.0 (`build_exe.bat`) → ทดสอบ → tag `v1.2.0` → รอ CI → patch SHA table
+- ถ้าจะเซ็นจริง: ใส่ secret `WINDOWS_PFX_BASE64` + `WINDOWS_PFX_PASSWORD` ก่อน push tag
+
+## commit ล่าสุด
+- `3ad9b00` (feat(v1.2.0): line-level copy, DOCX export, watch folder, code signing)
+- version: 1.2.0 (ในโค้ด) — ยังไม่ tag/release
