@@ -175,6 +175,40 @@
   }
   .lightbox.show { display: grid; }
   .lightbox img { max-width: 100%; max-height: 100%; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
+  .toasts { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column;
+    gap: .5rem; z-index: 60; max-width: min(90vw, 26rem); }
+  .toast { display: flex; align-items: center; gap: .5rem; background: var(--panel);
+    border: 1px solid var(--border); border-left: 3px solid var(--accent2);
+    box-shadow: var(--shadow); border-radius: .6rem; padding: .6rem .8rem;
+    font-size: .84rem; color: var(--text); animation: toastIn .18s ease-out; }
+  .toast.err { border-left-color: var(--err); }
+  .toast .x { margin-left: auto; border: none; background: none; cursor: pointer;
+    color: var(--muted); font-size: 1rem; line-height: 1; padding: 0 .1rem; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(6px); } }
+  .modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); z-index: 70;
+    display: none; place-items: center; padding: 1.2rem; backdrop-filter: blur(2px); }
+  .modal.show { display: grid; }
+  .modal .card { width: min(26rem, 100%); background: var(--panel); border-radius: 1rem;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .28); padding: 1.2rem 1.3rem 1rem;
+    animation: modalIn .18s ease-out; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(.97) translateY(4px); } }
+  .modal .icon { width: 2.6rem; height: 2.6rem; border-radius: .8rem; display: grid; place-items: center;
+    background: #ecfdf5; color: var(--accent); border: 1px solid #ccfbf1; margin-bottom: .7rem; }
+  .modal.danger .icon { background: #fef2f2; color: var(--err); border-color: #fee2e2; }
+  .modal .icon svg { width: 1.25rem; height: 1.25rem; }
+  .modal h3 { margin: 0 0 .35rem; font-size: 1rem; }
+  .modal p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.7; white-space: pre-wrap; }
+  .modal input { width: 100%; margin-top: .8rem; padding: .5rem .6rem; font: inherit; font-size: .86rem;
+    border: 1px solid var(--border); border-radius: .5rem; background: var(--panel); color: var(--text); }
+  .modal input:focus { outline: 2px solid #99f6e4; border-color: var(--accent2); }
+  .modal .acts { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.1rem; }
+  .modal .acts button { font: inherit; font-size: .84rem; cursor: pointer; border-radius: .55rem;
+    padding: .45rem .9rem; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+  .modal .acts button:hover { border-color: var(--accent); color: var(--accent); }
+  .modal .acts button.primary { border: none; background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff; font-weight: 600; box-shadow: 0 6px 16px rgba(20, 184, 166, .25); }
+  .modal .acts button.danger { border: none; background: linear-gradient(135deg, #ef4444, var(--err));
+    color: #fff; font-weight: 600; box-shadow: 0 6px 16px rgba(220, 38, 38, .25); }
 </style>
 </head>
 <body data-version="{{ version }}" data-auth="{{ 1 if auth_required else 0 }}" data-maxpages="{{ max_pages }}">
@@ -277,6 +311,21 @@
 
 <div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
 
+<div class="toasts" id="toasts"></div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="card">
+    <div class="icon" id="modalIcon"></div>
+    <h3 id="modalTitle"></h3>
+    <p id="modalMsg"></p>
+    <input id="modalInput" class="hidden" autocomplete="off">
+    <div class="acts">
+      <button id="modalCancel" type="button">ยกเลิก</button>
+      <button id="modalOk" class="primary" type="button">ตกลง</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const I18N = {
     th: {
@@ -311,6 +360,11 @@
       modeBrowser: "เปิดเบราว์เซอร์",
       modeNone: "ไม่เปิดอะไร (headless)",
       prefSaved: "บันทึกแล้ว — มีผลเมื่อเปิดโปรแกรมครั้งถัดไป",
+      ok: "ตกลง", quitTitle: "ปิดโปรแกรม", apiKeyTitle: "ต้องใช้ API key",
+      needResult: "ยังไม่มีผลลัพธ์ — อ่านไฟล์ก่อน",
+      copyFailed: "คัดลอกไม่สำเร็จ",
+      downloaded: "ดาวน์โหลด {name}",
+      exporting: "กำลังสร้างไฟล์ {fmt}…",
     },
     en: {
       title: "OpenThai2.0 OCR",
@@ -344,6 +398,11 @@
       modeBrowser: "Open in browser",
       modeNone: "Don't open anything (headless)",
       prefSaved: "Saved — applies the next time the app starts",
+      ok: "OK", quitTitle: "Quit", apiKeyTitle: "API key required",
+      needResult: "Nothing to export yet — read a file first",
+      copyFailed: "Copy failed",
+      downloaded: "Downloading {name}",
+      exporting: "Building {fmt}…",
     }
   };
 
@@ -376,6 +435,77 @@
   function applyStatusIfIdle() {
     if (status.dataset.idle === "1") status.textContent = t("statusWaiting");
   }
+
+  /* ---------- toast & styled dialogs ---------- */
+  const toasts = document.getElementById("toasts");
+  function toast(message, isError) {
+    if (!message) return;
+    const el = document.createElement("div");
+    el.className = "toast" + (isError ? " err" : "");
+    const span = document.createElement("span");
+    span.textContent = message;
+    const x = document.createElement("button");
+    x.className = "x";
+    x.type = "button";
+    x.textContent = "×";
+    x.title = "close";
+    x.addEventListener("click", () => el.remove());
+    el.append(span, x);
+    toasts.appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+  }
+
+  const ICONS = {
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>'
+  };
+  const modal = document.getElementById("modal");
+  const modalInput = document.getElementById("modalInput");
+  const modalCancelBtn = document.getElementById("modalCancel");
+  const modalOkBtn = document.getElementById("modalOk");
+  let modalResolve = null;
+
+  function settleModal(value) {
+    const resolve = modalResolve;
+    modalResolve = null;
+    modal.classList.remove("show", "danger");
+    if (resolve) resolve(value);
+  }
+
+  function openModal({ title, message, okText, cancelText, danger, input, value }) {
+    return new Promise(resolve => {
+      modalResolve = resolve;
+      modal.classList.toggle("danger", !!danger);
+      document.getElementById("modalIcon").innerHTML = danger ? ICONS.danger : ICONS.ok;
+      document.getElementById("modalTitle").textContent = title || "";
+      document.getElementById("modalMsg").textContent = message || "";
+      modalInput.classList.toggle("hidden", !input);
+      modalInput.value = input ? (value || "") : "";
+      modalCancelBtn.classList.toggle("hidden", cancelText === false);
+      modalCancelBtn.textContent = cancelText || t("cancel");
+      modalOkBtn.textContent = okText || t("ok");
+      modalOkBtn.className = danger ? "danger" : "primary";
+      modal.classList.add("show");
+      setTimeout(() => {
+        if (input) { modalInput.focus(); modalInput.select(); }
+        else modalOkBtn.focus();
+      }, 60);
+    });
+  }
+  const uiConfirm = (message, opts = {}) => openModal({ message, ...opts });
+  const uiPrompt = (message, value, opts = {}) => openModal({ message, input: true, value, ...opts });
+
+  const modalIsInput = () => !modalInput.classList.contains("hidden");
+  modalOkBtn.addEventListener("click", () => settleModal(modalIsInput() ? modalInput.value : true));
+  modalCancelBtn.addEventListener("click", () => settleModal(modalIsInput() ? null : false));
+  modal.addEventListener("click", e => {
+    if (e.target === modal) settleModal(modalIsInput() ? null : false);
+  });
+  document.addEventListener("keydown", e => {
+    if (!modal.classList.contains("show")) return;
+    if (e.key === "Escape") { e.preventDefault(); modalCancelBtn.click(); }
+    else if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); modalOkBtn.click(); }
+  });
 
   const drop = document.getElementById("drop");
   const fileInput = document.getElementById("file");
@@ -446,7 +576,7 @@
     if (key) opts.headers["X-API-Key"] = key;
     const res = await fetch(url, opts);
     if (res.status === 401 && !retried) {
-      const entered = window.prompt(t("apiKeyPrompt"), key);
+      const entered = await uiPrompt(t("apiKeyPrompt"), key, { title: t("apiKeyTitle") });
       if (entered !== null && entered.trim()) {
         localStorage.setItem("ocrApiKey", entered.trim());
         return api(url, opts, true);
@@ -663,14 +793,23 @@
   }
 
   async function copyText(text) {
+    if (!text) { toast(t("needResult"), true); return; }
     try {
       await navigator.clipboard.writeText(text);
-      setStatus(t("statusCopied"));
     } catch {
-      out.select();
-      document.execCommand("copy");
-      setStatus(t("statusCopied"));
+      const assist = document.createElement("textarea");
+      assist.value = text;
+      assist.setAttribute("readonly", "");
+      assist.style.cssText = "position:fixed;top:-1000px;opacity:0";
+      document.body.appendChild(assist);
+      assist.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch { ok = false; }
+      assist.remove();
+      if (!ok) { toast(t("copyFailed"), true); return; }
     }
+    setStatus(t("statusCopied"));
+    toast(t("statusCopied"));
   }
 
   function renderLines() {
@@ -699,7 +838,7 @@
   linesBtn.addEventListener("click", () => {
     showLines = !showLines;
     linesBtn.classList.toggle("act", showLines);
-    if (!pages.length) setStatus(t("statusNeedFile"));
+    if (!pages.length) toast(t("needResult"), true);
     renderLines();
   });
 
@@ -712,36 +851,51 @@
   copyBtn.addEventListener("click", () => copyText(out.value));
 
   function download(blob, name) {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = name;
+    a.rel = "noopener";
+    document.body.appendChild(a);
     a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast(t("downloaded", { name }));
   }
 
   saveTxtBtn.addEventListener("click", () => {
-    if (!out.value) return;
+    if (!out.value) { toast(t("needResult"), true); return; }
     const base = pages.length === 1 ? pages[0].file.replace(/\.[^.]+$/, "") : "ocr-results";
     download(new Blob([out.value], { type: "text/plain;charset=utf-8" }), base + ".txt");
   });
 
-  async function exportAs(fmt) {
+  async function exportAs(fmt, btn) {
     const p = pages[currentPage];
-    if (!p || !p.result_id) return;
-    const res = await api(`/api/result/${p.result_id}/export?format=${fmt}`);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setStatus(t("statusError") + ": " + (data.error || fmt), true);
-      return;
+    if (!p || !p.result_id) { toast(t("needResult"), true); return; }
+    if (btn) btn.disabled = true;
+    setStatus(t("exporting", { fmt }));
+    try {
+      const res = await api(`/api/result/${p.result_id}/export?format=${fmt}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast((data.error || t("statusError")) + " (" + fmt + ")", true);
+        setStatus(t("statusError") + ": " + (data.error || fmt), true);
+        return;
+      }
+      const blob = await res.blob();
+      const stem = p.file.replace(/\.[^.]+$/, "") || "ocr";
+      download(blob, `${stem}-ocr.${fmt}`);
+    } catch (err) {
+      toast(t("statusError") + ": " + err.message, true);
+    } finally {
+      if (btn) btn.disabled = !(pages.length && pages[currentPage]);
+      applyStatusIfIdle();
     }
-    const blob = await res.blob();
-    const stem = p.file.replace(/\.[^.]+$/, "") || "ocr";
-    download(blob, `${stem}-ocr.${fmt}`);
   }
-  saveDocxBtn.onclick = () => exportAs("docx");
-  savePdfBtn.onclick = () => exportAs("pdf");
-  saveCsvBtn.onclick = () => exportAs("csv");
-  saveJsonBtn.onclick = () => exportAs("json");
+  saveDocxBtn.onclick = () => exportAs("docx", saveDocxBtn);
+  savePdfBtn.onclick = () => exportAs("pdf", savePdfBtn);
+  saveCsvBtn.onclick = () => exportAs("csv", saveCsvBtn);
+  saveJsonBtn.onclick = () => exportAs("json", saveJsonBtn);
 
   /* ---------- lightbox ---------- */
   imgbox.addEventListener("click", () => {
@@ -766,9 +920,13 @@
 
   /* ---------- shutdown ---------- */
   document.getElementById("shutdownBtn").onclick = async () => {
-    if (!window.confirm(t("confirmShutdown"))) return;
+    const yes = await uiConfirm(t("confirmShutdown"), {
+      title: t("quitTitle"), okText: t("shutdown"), danger: true
+    });
+    if (!yes) return;
     try { await fetch("/api/shutdown", { method: "POST" }); } catch (e) { /* server exits */ }
     setStatus(t("closed"));
+    toast(t("closed"));
   };
 
   applyLang();

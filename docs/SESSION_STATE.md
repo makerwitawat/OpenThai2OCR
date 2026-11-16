@@ -297,3 +297,43 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 ## commit ล่าสุด
 - `4aa1696` (fix: newline before pywebview in requirements.txt) — tag `v1.3.0` อยู่ที่ commit นี้
 - version: 1.3.0 — release แล้ว (release id 446884747)
+
+## Session 8 (v1.3.1 — แก้ปุ่มดาวน์โหลดในโหมดหน้าต่าง + กล่องยืนยัน/toast สวย ๆ) — 2026-11-16
+
+## Objective
+แก้ "กดปุ่ม .txt/.docx/.pdf/.csv/.json แล้วไม่เห็นอะไร" และทำ alert/ยืนยันให้สวยงาม
+
+## สาเหตุ
+- pywebview/WebView2 ตั้ง `ALLOW_DOWNLOADS = False` โดยค่าเริ่มต้น → ทุกดาวน์โหลดถูก `args.Cancel = True`
+  เงียบ ๆ (เบราว์เซอร์ปกติไม่เป็น) → ในโหมดหน้าต่างปุ่มส่งออกเลยเหมือนไม่ทำงาน
+
+## Completed
+- `_open_window`: เปิด `webview.settings["ALLOW_DOWNLOADS"] = True` → ดาวน์โหลดได้
+  (มีหน้าต่าง Save file ของ Windows ให้เลือกที่เก็บ) · ทดสอบจริงด้วยสคริปต์ pywebview
+  แทน handler ให้บันทึกอัตโนมัติ → ไฟล์ออกมาครบเนื้อหา
+- **กล่องยืนยัน/กรอกข้อความแบบใหม่** แทน `window.confirm` / `window.prompt` —
+  ไอคอน, หัวข้อ, ปุ่ม primary/danger, Enter/Esc, คลิกฉากหลังเพื่อปิด · ใช้กับ
+  ปุ่มปิดโปรแกรม + ช่อง API key
+- **toast แจ้งเตือนมุมล่างขวา** — คัดลอกแล้ว/กำลังดาวน์โหลด/ข้อผิดพลาด
+- ปุ่มก่อนมีผลลัพธ์ → toast "ยังไม่มีผลลัพธ์ — อ่านไฟล์ก่อน" (เดิมเงียบ)
+- เปลี่ยนข้อความ toast เป็น "ดาวน์โหลด {name}" (เพราะในโหมดหน้าต่างผู้ใช้ต้องเลือกที่เก็บเอง)
+- bump version 1.3.1 · CHANGELOG + USAGE ไทย/อังกฤษ (troubleshooting) · pytest 13/13
+
+## ข้อควรระวังที่เจอ
+- pywebview: `webview.settings` เป็น ImmutableDict แต่แก้ค่า key เดิมได้ (`settings["X"] = ...`)
+- monkeypatch `WinForms.SaveFileDialog` ไม่ได้ (pythonnet) → ใช้วิธีแทน
+  `EdgeChrome.on_download_starting` ในสคริปต์ทดสอบ
+- ปุ่มใน WebView2 ต้องโฟกัสหน้าต่างก่อน (clipboard/download dialog)
+
+## Active
+- v1.3.1 พร้อมในซอร์ส (`dist` ยังเป็น exe 1.3.0 — ต้อง build ใหม่ก่อนปล่อย)
+
+## Blocked
+- code signing ยังไม่มีใบรับรอง · อ่านภาพโดยตรงไม่ได้
+
+## Next Move
+- build exe 1.3.1 → ทดสอบในโหมดหน้าต่าง (กดดาวน์โหลด/คัดลอก) → tag `v1.3.1` → release notes + SHA
+
+## commit ล่าสุด
+- `e720dbc` (docs: fill v1.3.0 SHA256 table and session state)
+- version: 1.3.1 (ในโค้ด) — ยังไม่ tag/release

@@ -181,6 +181,8 @@ See PHP / Python / JavaScript / C# / Java / Go / Ruby / PowerShell examples → 
 | Very slow | Lower the scale / `det.limit`; close CPU-heavy apps |
 | Handwriting not recognised | This model targets printed text — use a VLM model for handwriting |
 | Thai garbled in another program | Make sure your client decodes the response as UTF-8 |
+| App window: `.txt/.docx/.pdf/.csv/.json` does nothing | Windows shows a **Save file** dialog (WebView2) — bring the app window to the front and try again |
+| Copy does nothing | Click the copy button again while the app window is focused |
 
 ## 8. Project layout
 

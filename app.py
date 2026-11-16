@@ -27,7 +27,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_file
 
 APP_NAME = "openthai2ocr"
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 BUNDLE = Path(getattr(sys, "_MEIPASS", BASE)) if getattr(sys, "frozen", False) else BASE
@@ -995,6 +995,8 @@ def _open_window(url: str) -> bool:
     except Exception:
         log.exception("pywebview is not installed")
         return False
+    if not webview.settings.get("ALLOW_DOWNLOADS", True):
+        webview.settings["ALLOW_DOWNLOADS"] = True
     webview.create_window("OpenThai2.0 OCR", url, width=1280, height=880, min_size=(900, 600))
     webview.start()
     return True
