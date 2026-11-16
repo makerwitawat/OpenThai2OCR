@@ -27,7 +27,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_file
 
 APP_NAME = "openthai2ocr"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 BUNDLE = Path(getattr(sys, "_MEIPASS", BASE)) if getattr(sys, "frozen", False) else BASE
@@ -58,7 +58,46 @@ API_KEY = ""
 WATCH_DIR = ""
 WATCH_OUT = ""
 WATCH_INTERVAL = 5.0
+STARTED_AT = time.time()
+OPEN_BROWSER = True
 log = logging.getLogger(APP_NAME)
+
+
+# ---------------------------------------------------------------- preferences
+SETTINGS_FILE = BASE / "settings.json"
+FALLBACK_SETTINGS = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "OpenThai2OCR" / "settings.json"
+
+
+def _settings_file(writable: bool = False) -> Path:
+    if not writable:
+        return SETTINGS_FILE if SETTINGS_FILE.exists() else FALLBACK_SETTINGS
+    return SETTINGS_FILE if os.access(BASE, os.W_OK) else FALLBACK_SETTINGS
+
+
+def load_prefs() -> dict:
+    for path in (SETTINGS_FILE, FALLBACK_SETTINGS):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            continue
+    return {}
+
+
+def save_prefs(updates: dict) -> dict:
+    data = load_prefs()
+    data.update(updates)
+    targets = [_settings_file(writable=True)]
+    if targets[0] != FALLBACK_SETTINGS:
+        targets.append(FALLBACK_SETTINGS)
+    for path in targets:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            return data
+        except OSError:
+            log.warning("cannot write settings: %s", path)
+    return data
 
 
 def setup_logging(level: str = "INFO") -> Path | None:
@@ -464,7 +503,7 @@ def _guard():
     if not API_KEY:
         return None
     path = request.path
-    if path == "/" or path == "/favicon.ico" or path == "/api/health":
+    if path in ("/", "/docs", "/playground", "/status", "/favicon.ico", "/api/health"):
         return None
     if path == "/api/shutdown":
         return None if _is_local() else (jsonify({"ok": False, "error": "ปิดได้จากเครื่องนี้เท่านั้น"}), 403)
@@ -489,7 +528,65 @@ def too_large(_e):
 # ---------------------------------------------------------------- routes
 @app.get("/")
 def index():
-    return render_template("index.html", version=APP_VERSION, auth_required=bool(API_KEY), max_pages=MAX_PAGES)
+    return render_template("index.html", version=APP_VERSION, auth_required=bool(API_KEY),
+                           max_pages=MAX_PAGES, open_browser=OPEN_BROWSER)
+
+
+@app.get("/docs")
+def docs_page():
+    return render_template("docs.html", version=APP_VERSION, auth_required=bool(API_KEY),
+                          max_pages=MAX_PAGES, max_upload_mb=MAX_CONTENT_MB)
+
+
+@app.get("/playground")
+def playground_page():
+    return render_template("playground.html", version=APP_VERSION, auth_required=bool(API_KEY))
+
+
+@app.get("/status")
+def status_page():
+    return render_template("status.html", version=APP_VERSION, auth_required=bool(API_KEY))
+
+
+@app.get("/api/prefs")
+def api_prefs_get():
+    prefs = load_prefs()
+    return jsonify({"ok": True, "open_browser": OPEN_BROWSER,
+                    "saved_open_browser": prefs.get("open_browser")})
+
+
+@app.post("/api/prefs")
+def api_prefs_set():
+    global OPEN_BROWSER
+    body = request.get_json(silent=True) or {}
+    updated = {}
+    if "open_browser" in body:
+        updated["open_browser"] = bool(body["open_browser"])
+    if not updated:
+        return jsonify({"ok": False, "error": "ไม่มีค่าที่จะบันทึก"}), 400
+    save_prefs(updated)
+    OPEN_BROWSER = updated.get("open_browser", OPEN_BROWSER)
+    log.info("prefs updated: %s", updated)
+    return jsonify({"ok": True, **updated})
+
+
+@app.get("/api/status")
+def api_status():
+    with _jobs_lock:
+        jobs = sorted(_jobs.values(), key=lambda j: j.created, reverse=True)[:20]
+        job_rows = [{"id": j.id, "name": j.name, "status": j.status, "progress": j.progress,
+                     "error": j.error, "created": j.created} for j in jobs]
+    with _results_lock:
+        results = len(_results)
+    return jsonify({"ok": True, "app": APP_NAME, "version": APP_VERSION,
+                    "uptime_s": round(time.time() - STARTED_AT, 1),
+                    "model_dir": str(MODEL_DIR), "model_ready": all(
+                        (MODEL_DIR / n).exists() for n in ("det.onnx", "rec.onnx", "rec_dict.txt", "config.json")),
+                    "auth_required": bool(API_KEY), "open_browser": OPEN_BROWSER,
+                    "watch": {"dir": WATCH_DIR or None, "out": WATCH_OUT or None,
+                              "interval": WATCH_INTERVAL if WATCH_DIR else None},
+                    "limits": {"max_upload_mb": MAX_CONTENT_MB, "max_pages": MAX_PAGES},
+                    "results_cached": results, "jobs": job_rows})
 
 
 @app.get("/favicon.ico")
@@ -503,6 +600,7 @@ def favicon():
 @app.get("/api/health")
 def api_health():
     return jsonify({"ok": True, "app": APP_NAME, "version": APP_VERSION,
+                    "uptime_s": round(time.time() - STARTED_AT, 1),
                     "model_dir": str(MODEL_DIR),
                     "model_ready": all((MODEL_DIR / n).exists() for n in ("det.onnx", "rec.onnx", "rec_dict.txt", "config.json")),
                     "auth_required": bool(API_KEY),
@@ -865,10 +963,11 @@ def _port_free(host: str, port: int) -> bool:
 
 
 def main():
-    global MODEL_DIR, PORT, API_KEY, WATCH_DIR, WATCH_OUT, WATCH_INTERVAL
+    global MODEL_DIR, PORT, API_KEY, WATCH_DIR, WATCH_OUT, WATCH_INTERVAL, OPEN_BROWSER
     host = "127.0.0.1"
     ports = [PORT]
-    no_browser = False
+    browser_override = None
+    OPEN_BROWSER = bool(load_prefs().get("open_browser", True))
     args = sys.argv[1:]
     log_level = "INFO"
     for i, a in enumerate(args):
@@ -893,7 +992,12 @@ def main():
             except ValueError:
                 pass
         elif a == "--no-browser":
-            no_browser = True
+            browser_override = False
+        elif a == "--browser":
+            browser_override = True
+
+    if browser_override is not None:
+        OPEN_BROWSER = browser_override
 
     setup_logging(log_level)
     required = ["det.onnx", "rec.onnx", "rec_dict.txt", "config.json"]
@@ -906,7 +1010,7 @@ def main():
     running = _existing_instance(ports)
     if running:
         log.info("already running on port %d — opening browser", running)
-        if not no_browser:
+        if OPEN_BROWSER:
             webbrowser.open(f"http://127.0.0.1:{running}/")
         return 0
 
@@ -922,7 +1026,7 @@ def main():
         _show_info(f"เปิดใช้งานใน LAN — สร้าง API key อัตโนมัติ:\n\n{API_KEY}\n\n"
                    f"ใช้ header X-API-Key หรือช่อง API key ในหน้าเว็บ\n(กำหนดเองได้ด้วย --api-key)")
 
-    if not no_browser:
+    if OPEN_BROWSER:
         threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}/")).start()
 
     if WATCH_DIR:

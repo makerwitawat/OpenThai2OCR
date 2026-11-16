@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status — OpenThai2.0 OCR</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --panel:#fff; --panel2:#f1f5f9; --border:#e2e8f0; --text:#0f172a;
+    --muted:#64748b; --accent:#0f766e; --accent2:#14b8a6; --err:#dc2626;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.05);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; color:var(--text); min-height:100vh; font-size:15px;
+    font-family:"Segoe UI","Noto Sans Thai",Leelawadee UI,system-ui,sans-serif;
+    background:linear-gradient(180deg,#f8fafc 0%,#eef4f7 55%,#f8fafc 100%); }
+  header { display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; padding:.9rem 1.6rem;
+    border-bottom:1px solid var(--border); background:rgba(255,255,255,.9);
+    backdrop-filter:blur(6px); position:sticky; top:0; z-index:20; }
+  header .logo { width:2.4rem; height:2.4rem; border-radius:.6rem;
+    background:linear-gradient(135deg,var(--accent2),#0ea5e9);
+    display:grid; place-items:center; font-weight:800; font-size:.95rem; color:#fff; }
+  header h1 { font-size:1.05rem; margin:0; line-height:1.3; }
+  header small { color:var(--muted); display:block; font-weight:400; font-size:.78rem; }
+  .nav { display:flex; gap:.2rem; align-items:center; margin-left:.6rem; flex-wrap:wrap; }
+  .nav a { text-decoration:none; color:var(--muted); font-size:.78rem;
+    padding:.3rem .55rem; border-radius:.45rem; border:1px solid transparent; }
+  .nav a:hover { color:var(--accent); border-color:var(--border); background:var(--panel); }
+  .nav a.act { color:#fff; background:var(--accent); border-color:var(--accent); }
+  .head-actions { margin-left:auto; display:flex; gap:.4rem; align-items:center; }
+  .head-actions button { border:1px solid var(--border); background:var(--panel); color:var(--text);
+    border-radius:.5rem; padding:.4rem .6rem; cursor:pointer; font-size:.8rem; }
+  .head-actions button:hover { border-color:var(--accent); color:var(--accent); }
+  .ver { color:var(--muted); font-size:.72rem; }
+  main { max-width:60rem; margin:0 auto; padding:1.3rem 1.6rem 4rem; }
+  .grid { display:grid; gap:.9rem; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:.9rem;
+    box-shadow:var(--shadow); padding:1rem 1.1rem; }
+  .card .k { font-size:.72rem; color:var(--muted); letter-spacing:.02em; text-transform:uppercase; }
+  .card .v { font-size:1.05rem; font-weight:700; margin-top:.25rem; word-break:break-word; }
+  .card .s { color:var(--muted); font-size:.76rem; margin-top:.25rem; word-break:break-all; }
+  .ok { color:var(--accent); } .bad { color:var(--err); }
+  .card .v.ok { color:var(--accent); } .card .v.bad { color:var(--err); }
+  h2 { font-size:.95rem; margin:1.6rem 0 .6rem; }
+  table { width:100%; border-collapse:collapse; font-size:.82rem; background:var(--panel);
+    border:1px solid var(--border); border-radius:.8rem; overflow:hidden; box-shadow:var(--shadow); }
+  th, td { text-align:left; padding:.5rem .7rem; border-bottom:1px solid var(--border); }
+  th { background:var(--panel2); color:var(--muted); font-weight:600; }
+  tr:last-child td { border-bottom:none; }
+  code { background:var(--panel2); border:1px solid var(--border); border-radius:.3rem;
+    padding:.05rem .3rem; font-size:.85em; }
+  .empty { color:var(--muted); text-align:center; padding:1.2rem; font-size:.84rem; }
+  .bar { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin:.4rem 0 .8rem;
+    color:var(--muted); font-size:.78rem; }
+  .dot { width:.55rem; height:.55rem; border-radius:50%; background:#94a3b8; display:inline-block; }
+  .dot.ok { background:var(--accent2); } .dot.bad { background:var(--err); }
+  .hint { color:var(--muted); font-size:.76rem; line-height:1.7; }
+  @media (max-width:700px) { main { padding:1rem .9rem 3rem; } }
+</style>
+</head>
+<body data-version="{{ version }}">
+<header>
+  <div class="logo">OT</div>
+  <h1>OpenThai2.0 OCR <small data-th="สถานะและงานล่าสุด" data-en="Status and recent jobs">สถานะและงานล่าสุด</small></h1>
+  <nav class="nav">
+    <a href="/" data-th="OCR" data-en="OCR">OCR</a>
+    <a href="/docs" data-th="สอนใช้ API" data-en="API guide">สอนใช้ API</a>
+    <a href="/playground" data-th="ทดสอบ API" data-en="API playground">ทดสอบ API</a>
+    <a href="/status" class="act" data-th="สถานะ" data-en="Status">สถานะ</a>
+  </nav>
+  <div class="head-actions">
+    <button id="langBtn">EN</button>
+    <button id="refreshBtn" data-th="รีเฟรช" data-en="Refresh">รีเฟรช</button>
+    <span class="ver">v{{ version }}</span>
+  </div>
+</header>
+
+<main>
+  <div class="bar">
+    <span class="dot" id="dot"></span>
+    <span id="stateText" data-th="กำลังโหลด…" data-en="Loading…">กำลังโหลด…</span>
+    <span id="updated"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="k" data-th="เวอร์ชัน" data-en="Version">เวอร์ชัน</div>
+      <div class="v" id="version">—</div>
+      <div class="s" id="uptime"></div></div>
+    <div class="card"><div class="k" data-th="โมเดล" data-en="Model">โมเดล</div>
+      <div class="v" id="model">—</div>
+      <div class="s" id="modelDir"></div></div>
+    <div class="card"><div class="k" data-th="โหมดความปลอดภัย" data-en="Security mode">โหมดความปลอดภัย</div>
+      <div class="v" id="auth">—</div>
+      <div class="s" data-th="API key · เปิดเบราว์เซอร์อัตโนมัติ" data-en="API key · open browser on start">API key · เปิดเบราว์เซอร์อัตโนมัติ</div></div>
+    <div class="card"><div class="k" data-th="ขีดจำกัด" data-en="Limits">ขีดจำกัด</div>
+      <div class="v" id="limits">—</div>
+      <div class="s" id="results"></div></div>
+    <div class="card" style="grid-column:span 2"><div class="k" data-th="เฝ้าโฟลเดอร์ (watch folder)" data-en="Watch folder">เฝ้าโฟลเดอร์ (watch folder)</div>
+      <div class="v" id="watch">—</div>
+      <div class="s" id="watchOut"></div></div>
+  </div>
+
+  <h2 data-th="งาน OCR ล่าสุด" data-en="Recent OCR jobs">งาน OCR ล่าสุด</h2>
+  <table id="jobsTable">
+    <thead><tr>
+      <th data-th="งาน" data-en="Job">งาน</th>
+      <th data-th="สถานะ" data-en="Status">สถานะ</th>
+      <th data-th="ความคืบหน้า" data-en="Progress">ความคืบหน้า</th>
+      <th data-th="เริ่มเมื่อ" data-en="Started">เริ่มเมื่อ</th>
+    </tr></thead>
+    <tbody><tr><td colspan="4" class="empty" data-th="ยังไม่มีงาน — ลองอ่านไฟล์จากหน้า OCR หรือหน้า ทดสอบ API"
+      data-en="No jobs yet — run a file from the OCR page or the API playground">ยังไม่มีงาน — ลองอ่านไฟล์จากหน้า OCR หรือหน้า ทดสอบ API</td></tr></tbody>
+  </table>
+  <p class="hint" data-th="หน้านี้อัปเดตอัตโนมัติทุก 3 วินาที · ข้อมูลจาก <code>GET /api/status</code>"
+     data-en="This page refreshes every 3 seconds · data from <code>GET /api/status</code>">หน้านี้อัปเดตอัตโนมัติทุก 3 วินาที · ข้อมูลจาก <code>GET /api/status</code></p>
+</main>
+
+<script>
+  const I18N = {
+    th: { up: "ระบบทำงานปกติ", down: "ติดต่อระบบไม่ได้", loading: "กำลังโหลด…",
+          yes: "เปิดใช้ API key", no: "เฉพาะเครื่องนี้ (ไม่ต้องใช้ key)", on: "เปิด", off: "ปิด",
+          pages: "หน้า", mb: "MB", cached: "ผลลัพธ์ที่เก็บไว้", job: "งาน",
+          status: { queued: "รอคิว", running: "กำลังทำงาน", done: "เสร็จ", error: "ผิดพลาด", cancelled: "ยกเลิก" },
+          updated: "อัปเดตล่าสุด" },
+    en: { up: "Service is healthy", down: "Cannot reach the service", loading: "Loading…",
+          yes: "API key required", no: "Local only (no key)", on: "on", off: "off",
+          pages: "pages", mb: "MB", cached: "results cached", job: "job",
+          status: { queued: "queued", running: "running", done: "done", error: "error", cancelled: "cancelled" },
+          updated: "Updated" }
+  };
+  let lang = localStorage.getItem("ocrLang") || "th";
+  const t = k => (I18N[lang] && I18N[lang][k]) || I18N.th[k] || k;
+
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-th]").forEach(el => {
+      el.innerHTML = lang === "en" ? el.dataset.en : el.dataset.th;
+    });
+    document.getElementById("langBtn").textContent = lang === "th" ? "EN" : "ไทย";
+    if (last) render(last);
+    else {
+      document.getElementById("stateText").textContent = t("loading");
+      document.getElementById("watch").textContent = t("off");
+    }
+  }
+  document.getElementById("langBtn").onclick = () => {
+    lang = lang === "th" ? "en" : "th";
+    localStorage.setItem("ocrLang", lang);
+    applyLang();
+  };
+
+  let last = null;
+
+  function fmtUptime(sec) {
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    if (lang === "en") return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`;
+    return h ? `${h} ชม. ${m} น.` : m ? `${m} น. ${s} วินาที` : `${s} วินาที`;
+  }
+
+  function render(data) {
+    last = data;
+    document.getElementById("dot").className = "dot ok";
+    document.getElementById("stateText").textContent = t("up");
+    document.getElementById("updated").textContent =
+      t("updated") + " " + new Date().toLocaleTimeString();
+    document.getElementById("version").textContent = "v" + data.version;
+    document.getElementById("uptime").textContent =
+      (lang === "th" ? "ทำงานมา " : "up ") + fmtUptime(data.uptime_s);
+    document.getElementById("model").textContent = data.model_ready ? "ready" : "missing";
+    document.getElementById("model").className = "v " + (data.model_ready ? "ok" : "bad");
+    document.getElementById("modelDir").textContent = data.model_dir;
+    document.getElementById("auth").textContent = data.auth_required ? t("yes") : t("no");
+    document.getElementById("auth").className = "v " + (data.auth_required ? "bad" : "ok");
+    document.getElementById("limits").textContent =
+      `${data.limits.max_upload_mb} ${t("mb")} · ${data.limits.max_pages} ${t("pages")}`;
+    document.getElementById("results").textContent =
+      `${t("cached")}: ${data.results_cached}`;
+    const w = data.watch || {};
+    document.getElementById("watch").textContent = w.dir || t("off");
+    document.getElementById("watchOut").textContent = w.dir
+      ? `${w.out || "(ocr-results/)"} · ${w.interval}s`
+      : "";
+
+    const tbody = document.querySelector("#jobsTable tbody");
+    const jobs = data.jobs || [];
+    if (!jobs.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">${lang === "th"
+        ? "ยังไม่มีงาน — ลองอ่านไฟล์จากหน้า OCR หรือหน้า ทดสอบ API"
+        : "No jobs yet — run a file from the OCR page or the API playground"}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = jobs.map(j => {
+      const st = (t("status")[j.status] || j.status);
+      const cls = j.status === "done" ? "ok" : j.status === "error" ? "bad" : "";
+      const when = new Date(j.created * 1000).toLocaleTimeString();
+      const prog = j.progress ? `${j.progress.done}/${j.progress.total}` : "—";
+      return `<tr><td>${escapeHtml(j.name || j.id)}<br><code>${j.id}</code></td>
+        <td class="${cls}">${st}</td><td>${prog}</td><td>${when}</td></tr>`;
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  async function refresh() {
+    try {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "status");
+      render(data);
+    } catch {
+      document.getElementById("dot").className = "dot bad";
+      document.getElementById("stateText").textContent = t("down");
+      document.getElementById("updated").textContent = "";
+    }
+  }
+
+  document.getElementById("refreshBtn").onclick = refresh;
+  applyLang();
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>

@@ -52,6 +52,15 @@
   .fs { display: flex; gap: .25rem; align-items: center; }
   .fs button { width: 2rem; height: 2rem; padding: 0; }
   .ver { color: var(--muted); font-size: .72rem; margin-left: .3rem; }
+  .nav { display: flex; gap: .2rem; align-items: center; margin-left: .6rem; flex-wrap: wrap; }
+  .nav a {
+    text-decoration: none; color: var(--muted); font-size: .78rem;
+    padding: .3rem .55rem; border-radius: .45rem; border: 1px solid transparent;
+  }
+  .nav a:hover { color: var(--accent); border-color: var(--border); background: var(--panel); }
+  .nav a.act { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .check { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
+  .check input { accent-color: var(--accent); }
   main { max-width: 78rem; margin: 0 auto; padding: 1.3rem 1.6rem 3rem; }
   .drop {
     border: 2px dashed #cbd5e1; border-radius: 1rem;
@@ -174,6 +183,12 @@
   <h1 data-i18n="title">OpenThai2.0 OCR
     <small data-i18n="subtitle">อ่านข้อความไทย/อังกฤษจากรูปและ PDF · ทำงานบนเครื่องนี้ (CPU)</small>
   </h1>
+  <nav class="nav">
+    <a href="/" class="act" data-i18n="navOcr">OCR</a>
+    <a href="/docs" data-i18n="navDocs">สอนใช้ API</a>
+    <a href="/playground" data-i18n="navPlay">ทดสอบ API</a>
+    <a href="/status" data-i18n="navStatus">สถานะ</a>
+  </nav>
   <div class="head-actions">
     <button id="langBtn" title="ภาษา / Language">EN</button>
     <div class="fs">
@@ -203,6 +218,10 @@
       </select>
     </label>
     <span class="hint" data-i18n="scaleHint">ภาพหน้าจอเล็ก/ตัวอักษรเล็ก ลองเพิ่มเป็น 2× จะอ่านแม่นขึ้น</span>
+    <label class="check" title="มีผลตั้งแต่เปิดโปรแกรมครั้งถัดไป / Applies from the next start">
+      <input type="checkbox" id="openBrowser">
+      <span data-i18n="openBrowserLabel">เปิดเบราว์เซอร์อัตโนมัติเมื่อเริ่ม</span>
+    </label>
     <span class="authbar" id="authbar">
       <span data-i18n="apiKeyLabel">API key:</span>
       <input type="password" id="apiKey" autocomplete="off">
@@ -282,6 +301,9 @@
       doneInfo: "สำเร็จ · {pages} หน้า · {lines} บรรทัด",
       cancelledInfo: "ยกเลิกการประมวลผลแล้ว",
       cancelling: "กำลังยกเลิก…",
+      navOcr: "OCR", navDocs: "สอนใช้ API", navPlay: "ทดสอบ API", navStatus: "สถานะ",
+      openBrowserLabel: "เปิดเบราว์เซอร์อัตโนมัติเมื่อเริ่ม",
+      prefSaved: "บันทึกแล้ว — มีผลเมื่อเปิดโปรแกรมครั้งถัดไป",
     },
     en: {
       title: "OpenThai2.0 OCR",
@@ -309,6 +331,9 @@
       doneInfo: "Done · {pages} page(s) · {lines} line(s)",
       cancelledInfo: "Processing cancelled",
       cancelling: "Cancelling…",
+      navOcr: "OCR", navDocs: "API guide", navPlay: "API playground", navStatus: "Status",
+      openBrowserLabel: "Open browser on start",
+      prefSaved: "Saved — applies the next time the app starts",
     }
   };
 
@@ -420,6 +445,26 @@
     }
     return res;
   }
+
+  /* ---------- prefs: open browser on start ---------- */
+  const openBrowserBox = document.getElementById("openBrowser");
+  fetch("/api/prefs").then(r => r.json()).then(d => {
+    if (d && d.ok) openBrowserBox.checked = !!d.open_browser;
+  }).catch(() => {});
+  openBrowserBox.addEventListener("change", async () => {
+    try {
+      const res = await fetch("/api/prefs", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ open_browser: openBrowserBox.checked })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "prefs");
+      setStatus(t("prefSaved"));
+    } catch (err) {
+      openBrowserBox.checked = !openBrowserBox.checked;
+      setStatus(t("statusError") + ": " + err.message, true);
+    }
+  });
 
   /* ---------- file input ---------- */
   drop.addEventListener("click", () => fileInput.click());

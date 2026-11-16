@@ -18,13 +18,17 @@
 
 ## Endpoints
 
+> หน้าเว็บในตัวมีคู่มือและตัวทดสอบ: `http://127.0.0.1:5000/docs` (สอนใช้งาน API) และ
+> `http://127.0.0.1:5000/playground` (ยิงคำขอจริง ดู JSON/เวลา)
+
 ### `GET /api/health`
 
 ```json
 {
   "ok": true,
   "app": "openthai2ocr",
-  "version": "1.2.0",
+  "version": "1.3.0",
+  "uptime_s": 128.4,
   "model_dir": "D:\\...\\models",
   "model_ready": true,
   "auth_required": false,
@@ -32,6 +36,35 @@
   "limits": {"max_upload_mb": 100, "max_pages": 50}
 }
 ```
+
+### `GET /api/status`
+
+สถานะละเอียดสำหรับหน้า `/status`: เพิ่ม `results_cached` และ `jobs` (20 งานล่าสุด)
+
+```json
+{
+  "ok": true,
+  "version": "1.3.0",
+  "uptime_s": 128.4,
+  "open_browser": true,
+  "results_cached": 2,
+  "jobs": [{"id": "ab12cd34", "name": "book.pdf", "status": "running",
+            "progress": {"done": 5, "total": 12}, "error": "", "created": 1760000000.0}]
+}
+```
+
+### `GET` / `POST /api/prefs`
+
+อ่าน/บันทึกค่าตั้งของโปรแกรม (เก็บใน `settings.json` ข้าง exe)
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/prefs \
+  -H "Content-Type: application/json" -d '{"open_browser": false}'
+```
+
+| ฟิลด์ | ชนิด | คำอธิบาย |
+|---|---|---|
+| `open_browser` | bool | เปิดเบราว์เซอร์อัตโนมัติเมื่อเริ่มโปรแกรมครั้งถัดไป |
 
 ### `POST /api/ocr` — แนบไฟล์ (multipart, ชื่อ field = `file`)
 

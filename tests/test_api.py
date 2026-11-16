@@ -120,4 +120,34 @@ def test_watch_folder(tmp_path, monkeypatch, sample_png):
     assert (out / "doc-ocr.txt").read_text(encoding="utf-8").strip()
     assert (out / "doc-ocr.docx").read_bytes()[:2] == b"PK"
     assert (out / "doc-ocr.json").exists()
-    assert web._watch_scan() == []  # unchanged file is not processed twice
+assert web._watch_scan() == []  # unchanged file is not processed twice
+
+
+def test_pages_render(client):
+    for path in ("/", "/docs", "/playground", "/status"):
+        res = client.get(path)
+        assert res.status_code == 200, path
+        html = res.get_data(as_text=True)
+        assert "OpenThai2.0 OCR" in html
+
+
+def test_status_api(client):
+    data = client.get("/api/status").get_json()
+    assert data["ok"] is True
+    assert data["version"] == web.APP_VERSION
+    assert data["model_ready"] is True
+    assert "jobs" in data and "results_cached" in data
+    assert isinstance(data["uptime_s"], (int, float))
+
+
+def test_prefs_roundtrip(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(web, "SETTINGS_FILE", tmp_path / "settings.json")
+    monkeypatch.setattr(web, "FALLBACK_SETTINGS", tmp_path / "fallback.json")
+    monkeypatch.setattr(web, "OPEN_BROWSER", True)
+    res = client.post("/api/prefs", json={"open_browser": False}).get_json()
+    assert res["ok"] is True and res["open_browser"] is False
+    assert (tmp_path / "settings.json").exists()
+    data = client.get("/api/prefs").get_json()
+    assert data["open_browser"] is False
+    assert data["saved_open_browser"] is False
+    assert client.post("/api/prefs", json={}).status_code == 400

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API — OpenThai2.0 OCR</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --bg: #f6f8fb; --panel: #ffffff; --panel2: #f1f5f9; --border: #e2e8f0;
+    --text: #0f172a; --muted: #64748b; --accent: #0f766e; --accent2: #14b8a6;
+    --err: #dc2626; --shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: linear-gradient(180deg,#f8fafc 0%,#eef4f7 55%,#f8fafc 100%);
+    color: var(--text); font-family: "Segoe UI","Noto Sans Thai",Leelawadee UI,system-ui,sans-serif;
+    font-size: 15px; min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: .7rem; flex-wrap: wrap;
+    padding: .9rem 1.6rem; border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.9); backdrop-filter: blur(6px);
+    position: sticky; top: 0; z-index: 20;
+  }
+  header .logo { width: 2.4rem; height: 2.4rem; border-radius: .6rem;
+    background: linear-gradient(135deg,var(--accent2),#0ea5e9);
+    display: grid; place-items: center; font-weight: 800; font-size: .95rem; color: #fff; }
+  header h1 { font-size: 1.05rem; margin: 0; line-height: 1.3; }
+  header small { color: var(--muted); display: block; font-weight: 400; font-size: .78rem; }
+  .nav { display: flex; gap: .2rem; align-items: center; margin-left: .6rem; flex-wrap: wrap; }
+  .nav a { text-decoration: none; color: var(--muted); font-size: .78rem;
+    padding: .3rem .55rem; border-radius: .45rem; border: 1px solid transparent; }
+  .nav a:hover { color: var(--accent); border-color: var(--border); background: var(--panel); }
+  .nav a.act { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .head-actions { margin-left: auto; display: flex; gap: .4rem; align-items: center; }
+  .head-actions button, .head-actions select {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    border-radius: .5rem; padding: .4rem .6rem; cursor: pointer; font-size: .8rem; }
+  .head-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .ver { color: var(--muted); font-size: .72rem; }
+  main { max-width: 60rem; margin: 0 auto; padding: 1.4rem 1.6rem 4rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 .6rem; }
+  h2:first-of-type { margin-top: .3rem; }
+  h3 { font-size: .92rem; margin: 1.3rem 0 .4rem; }
+  p, li { line-height: 1.8; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: .9rem;
+    padding: 1rem 1.2rem; box-shadow: var(--shadow); }
+  code { background: var(--panel2); border: 1px solid var(--border); border-radius: .3rem;
+    padding: .05rem .35rem; font-size: .85em; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: .7rem; padding: .9rem 1rem;
+    overflow: auto; font-size: .82rem; line-height: 1.65; }
+  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+  table { width: 100%; border-collapse: collapse; font-size: .84rem; margin: .5rem 0 1rem; }
+  th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; background: var(--panel2); }
+  .tabs { display: flex; gap: .35rem; flex-wrap: wrap; margin: .6rem 0 .4rem; }
+  .tabs button { border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+    border-radius: .45rem; padding: .25rem .55rem; font-size: .76rem; cursor: pointer; }
+  .tabs button.act { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .copy { float: right; border: 1px solid #334155; background: #1e293b; color: #cbd5e1;
+    border-radius: .4rem; padding: .15rem .5rem; font-size: .7rem; cursor: pointer; margin-top: -.2rem; }
+  .copy:hover { color: #fff; border-color: #64748b; }
+  .note { border-left: 3px solid var(--accent2); background: #ecfdf5; padding: .5rem .8rem;
+    border-radius: 0 .5rem .5rem 0; font-size: .84rem; margin: .6rem 0; }
+  .warn { border-left: 3px solid var(--err); background: #fef2f2; padding: .5rem .8rem;
+    border-radius: 0 .5rem .5rem 0; font-size: .84rem; margin: .6rem 0; }
+  .pill { display: inline-block; font-size: .7rem; font-weight: 700; border-radius: .35rem;
+    padding: .05rem .4rem; margin-right: .35rem; }
+  .get { background: #dbeafe; color: #1d4ed8; }
+  .post { background: #dcfce7; color: #15803d; }
+  .hidden { display: none !important; }
+  @media (max-width: 700px) { main { padding: 1rem .9rem 3rem; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">OT</div>
+  <h1>OpenThai2.0 OCR <small data-th="คู่มือเชื่อมต่อ API" data-en="API integration guide">คู่มือเชื่อมต่อ API</small></h1>
+  <nav class="nav">
+    <a href="/" data-th="OCR" data-en="OCR">OCR</a>
+    <a href="/docs" class="act" data-th="สอนใช้ API" data-en="API guide">สอนใช้ API</a>
+    <a href="/playground" data-th="ทดสอบ API" data-en="API playground">ทดสอบ API</a>
+    <a href="/status" data-th="สถานะ" data-en="Status">สถานะ</a>
+  </nav>
+  <div class="head-actions">
+    <button id="langBtn">EN</button>
+    <span class="ver">v{{ version }}</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <p data-th="ใช้ API เดียวกันกับหน้าเว็บ — เรียกจากโปรแกรมอื่น ระบบอื่น หรือภาษาสคริปต์ใด ๆ ได้ทันที (HTTP + JSON) ไม่ต้องติดตั้ง SDK"
+       data-en="The same API that powers the web UI — call it from any program, system or scripting language (HTTP + JSON). No SDK needed.">ใช้ API เดียวกันกับหน้าเว็บ — เรียกจากโปรแกรมอื่น ระบบอื่น หรือภาษาสคริปต์ใด ๆ ได้ทันที (HTTP + JSON) ไม่ต้องติดตั้ง SDK</p>
+    <p><strong data-th="ที่อยู่เริ่มต้น:" data-en="Base URL:">ที่อยู่เริ่มต้น:</strong>
+      <code id="baseUrl">http://127.0.0.1:5000</code></p>
+    <p data-th="API key (ถ้าเปิดโหมด LAN): ส่งผ่าน header <code>X-API-Key</code> หรือ query <code>?key=</code> — หน้าเว็บเก็บ key ไว้ใน localStorage ของเบราว์เซอร์"
+       data-en="API key (LAN mode): send it in the <code>X-API-Key</code> header or the <code>?key=</code> query parameter — the web UI keeps it in the browser's localStorage.">API key (ถ้าเปิดโหมด LAN): ส่งผ่าน header <code>X-API-Key</code> หรือ query <code>?key=</code> — หน้าเว็บเก็บ key ไว้ใน localStorage ของเบราว์เซอร์</p>
+  </div>
+
+  <h2 data-th="1. เริ่มต้นเร็ว" data-en="1. Quick start">1. เริ่มต้นเร็ว</h2>
+  <p data-th="ตรวจว่าระบบพร้อมใช้ก่อนเสมอ (ไม่ต้องใช้ key)" data-en="Check that the service is ready first (no key needed)">ตรวจว่าระบบพร้อมใช้ก่อนเสมอ (ไม่ต้องใช้ key)</p>
+<pre><button class="copy">คัดลอก</button><code>curl -s http://127.0.0.1:5000/api/health</code></pre>
+  <p data-th="อ่านภาพหนึ่งไฟล์แล้วได้ข้อความ + พิกัดบรรทัด + ความมั่นใจ" data-en="OCR one image and get text, line boxes and confidence">อ่านภาพหนึ่งไฟล์แล้วได้ข้อความ + พิกัดบรรทัด + ความมั่นใจ</p>
+<pre><button class="copy">คัดลอก</button><code>curl -s -X POST http://127.0.0.1:5000/api/ocr -F "file=@invoice.jpg"</code></pre>
+
+  <h2 data-th="2. รายการ endpoint" data-en="2. Endpoints">2. รายการ endpoint</h2>
+  <table>
+    <tr><th data-th="เส้นทาง" data-en="Route">เส้นทาง</th><th data-th="ใช้ทำอะไร" data-en="What it does">ใช้ทำอะไร</th></tr>
+    <tr><td><span class="pill get">GET</span><code>/api/health</code></td>
+        <td data-th="สถานะเครื่อง/โมเดล/version/watch folder" data-en="Health: model, version, watch folder">สถานะเครื่อง/โมเดล/version/watch folder</td></tr>
+    <tr><td><span class="pill get">GET</span><code>/api/status</code></td>
+        <td data-th="สถานะละเอียด + งาน OCR ล่าสุด 20 งาน + uptime" data-en="Detailed status + the last 20 OCR jobs + uptime">สถานะละเอียด + งาน OCR ล่าสุด 20 งาน + uptime</td></tr>
+    <tr><td><span class="pill post">POST</span><code>/api/ocr</code></td>
+        <td data-th="อ่านรูป/PDF (multipart <code>file</code> หรือ JSON base64)" data-en="OCR an image/PDF (multipart <code>file</code> or JSON base64)">อ่านรูป/PDF (multipart <code>file</code> หรือ JSON base64)</td></tr>
+    <tr><td><span class="pill post">POST</span><code>/api/jobs</code></td>
+        <td data-th="เริ่มงานเบื้องหลัง (PDF หลายหน้า) แล้วถามความคืบหน้าได้" data-en="Start a background job (multi-page PDF) and poll progress">เริ่มงานเบื้องหลัง (PDF หลายหน้า) แล้วถามความคืบหน้าได้</td></tr>
+    <tr><td><span class="pill get">GET</span><code>/api/jobs/&lt;id&gt;</code></td>
+        <td data-th="ความคืบหน้า/ผลลัพธ์ของงาน" data-en="Job progress / result">ความคืบหน้า/ผลลัพธ์ของงาน</td></tr>
+    <tr><td><span class="pill post">POST</span><code>/api/jobs/&lt;id&gt;/cancel</code></td>
+        <td data-th="ยกเลิกงาน" data-en="Cancel a job">ยกเลิกงาน</td></tr>
+    <tr><td><span class="pill get">GET</span><code>/api/result/&lt;id&gt;/export</code></td>
+        <td data-th="ส่งออกผลลัพธ์: <code>format=pdf|csv|json|txt|docx</code>" data-en="Export a result: <code>format=pdf|csv|json|txt|docx</code>">ส่งออกผลลัพธ์: <code>format=pdf|csv|json|txt|docx</code></td></tr>
+    <tr><td><span class="pill get">GET</span><span class="pill post">POST</span><code>/api/prefs</code></td>
+        <td data-th="อ่าน/บันทึกค่าตั้งเช่น <code>open_browser</code>" data-en="Read/save prefs such as <code>open_browser</code>">อ่าน/บันทึกค่าตั้งเช่น <code>open_browser</code></td></tr>
+    <tr><td><span class="pill post">POST</span><code>/api/shutdown</code></td>
+        <td data-th="ปิดโปรแกรม (เรียกได้จากเครื่องเดียวกันเท่านั้น)" data-en="Quit the app (local machine only)">ปิดโปรแกรม (เรียกได้จากเครื่องเดียวกันเท่านั้น)</td></tr>
+  </table>
+
+  <h2 data-th="3. ตัวอย่างโค้ด" data-en="3. Code samples">3. ตัวอย่างโค้ด</h2>
+  <div class="tabs" id="codeTabs">
+    <button data-code="curl" class="act">curl</button>
+    <button data-code="python">Python</button>
+    <button data-code="js">JavaScript</button>
+    <button data-code="php">PHP</button>
+    <button data-code="cs">C#</button>
+  </div>
+  <div id="code-box">
+<pre class="codeblock" data-code="curl"><button class="copy">คัดลอก</button><code>curl -s -X POST http://127.0.0.1:5000/api/ocr \
+  -F "file=@doc.png" \
+  -F "scale=auto" \
+  -F 'settings={"rec":{"drop_below":0.6}}'</code></pre>
+<pre class="codeblock hidden" data-code="python"><button class="copy">คัดลอก</button><code>import requests
+
+BASE = "http://127.0.0.1:5000"
+
+health = requests.get(f"{BASE}/api/health").json()
+print(health["version"], health["model_ready"])
+
+with open("doc.png", "rb") as f:
+    res = requests.post(f"{BASE}/api/ocr",
+                        files={"file": ("doc.png", f, "image/png")},
+                        data={"scale": "auto"},
+                        headers={"X-API-Key": ""},  # ใส่ key เมื่อเปิด LAN mode
+                        timeout=120).json()
+
+print(res["pages"][0]["text"])
+for line in res["pages"][0]["lines"]:
+    print(round(line["confidence"], 3), line["text"])
+
+pdf = requests.get(f"{BASE}/api/result/{res['result_id']}/export?format=pdf")
+open("doc-ocr.pdf", "wb").write(pdf.content)</code></pre>
+<pre class="codeblock hidden" data-code="js"><button class="copy">คัดลอก</button><code>const BASE = "http://127.0.0.1:5000";
+
+const form = new FormData();
+form.append("file", fileInput.files[0]);
+form.append("scale", "auto");
+
+const res = await fetch(`${BASE}/api/ocr`, { method: "POST", body: form });
+const data = await res.json();
+if (!data.ok) throw new Error(data.error);
+
+console.log(data.pages[0].text);
+const docx = await fetch(`${BASE}/api/result/${data.result_id}/export?format=docx`);
+const blob = await docx.blob();</code></pre>
+<pre class="codeblock hidden" data-code="php"><button class="copy">คัดลอก</button><code>&lt;?php
+$base = "http://127.0.0.1:5000";
+$file = new CURLFile("doc.png", "image/png", "doc.png");
+
+$ch = curl_init("$base/api/ocr");
+curl_setopt_array($ch, [
+    CURLOPT_POST =&gt; true,
+    CURLOPT_POSTFIELDS =&gt; ["file" =&gt; $file, "scale" =&gt; "auto"],
+    CURLOPT_RETURNTRANSFER =&gt; true,
+    CURLOPT_HTTPHEADER =&gt; ["X-API-Key: "],   // ใส่ key เมื่อเปิด LAN mode
+]);
+$data = json_decode(curl_exec($ch), true);
+
+if (!($data["ok"] ?? false)) {
+    exit("error: " . ($data["error"] ?? "unknown"));
+}
+echo $data["pages"][0]["text"];</code></pre>
+<pre class="codeblock hidden" data-code="cs"><button class="copy">คัดลอก</button><code>using var http = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:5000") };
+http.DefaultRequestHeaders.Add("X-API-Key", "");   // ใส่ key เมื่อเปิด LAN mode
+
+using var form = new MultipartFormDataContent();
+form.Add(new ByteArrayContent(File.ReadAllBytes("doc.png")), "file", "doc.png");
+form.Add(new StringContent("auto"), "scale");
+
+var res = await http.PostAsync("/api/ocr", form);
+var json = JObject.Parse(await res.Content.ReadAsStringAsync());
+Console.WriteLine(json["pages"]?[0]?["text"]);</code></pre>
+  </div>
+
+  <h2 data-th="4. รูปแบบคำตอบ" data-en="4. Response shape">4. รูปแบบคำตอบ</h2>
+<pre><code>{
+  "ok": true,
+  "text": "ข้อความรวมทุกหน้า",
+  "result_id": "9f1c2a3b4d5e6f70",
+  "pages": [
+    {
+      "page": 1,
+      "text": "สวัสดีครับ",
+      "confidence": 0.93,
+      "scale": 1.5,
+      "n_lines": 1,
+      "timing": { "det_ms": 76.2, "rec_ms": 15.4, "n_lines": 1 },
+      "lines": [
+        {
+          "text": "สวัสดีครับ",
+          "confidence": 0.93,
+          "row": 0,
+          "box": [[54.8,150.8],[953.7,152.9],[953.4,260.0],[54.5,257.9]],
+          "words": [{ "text": "สวัสดีครับ", "confidence": 0.95, "box": [[...]] }]
+        }
+      ]
+    }
+  ]
+}</code></pre>
+  <table>
+    <tr><th data-th="ฟิลด์" data-en="Field">ฟิลด์</th><th data-th="ความหมาย" data-en="Meaning">ความหมาย</th></tr>
+    <tr><td><code>pages[].text</code></td><td data-th="ข้อความของหน้านั้น" data-en="Text of that page">ข้อความของหน้านั้น</td></tr>
+    <tr><td><code>pages[].lines[]</code></td><td data-th="แต่ละบรรทัด: ข้อความ, ความมั่นใจ, พิกัดสี่มุม, คำย่อย" data-en="Per line: text, confidence, 4-corner box, words">แต่ละบรรทัด: ข้อความ, ความมั่นใจ, พิกัดสี่มุม, คำย่อย</td></tr>
+    <tr><td><code>pages[].scale</code></td><td data-th="อัตราขยายภาพที่ใช้จริง (พิกัดอ้างอิงภาพหลังขยาย)" data-en="Scale actually applied (boxes are in the scaled image)">อัตราขยายภาพที่ใช้จริง (พิกัดอ้างอิงภาพหลังขยาย)</td></tr>
+    <tr><td><code>result_id</code></td><td data-th="ใช้เรียก export ได้ (เก็บผลไว้ 5 ล่าสุด)" data-en="Use it to export (last 5 results are kept)">ใช้เรียก export ได้ (เก็บผลไว้ 5 ล่าสุด)</td></tr>
+  </table>
+
+  <h2 data-th="5. ตัวเลือกตอนเรียก" data-en="5. Request options">5. ตัวเลือกตอนเรียก</h2>
+  <table>
+    <tr><th data-th="พารามิเตอร์" data-en="Parameter">พารามิเตอร์</th><th data-th="ค่า" data-en="Value">ค่า</th></tr>
+    <tr><td><code>file</code></td><td data-th="ไฟล์ภาพ/PDF (multipart) — สูงสุด {{ max_upload_mb }} MB, PDF {{ max_pages }} หน้า" data-en="Image/PDF file (multipart) — up to {{ max_upload_mb }} MB, PDF {{ max_pages }} pages">ไฟล์ภาพ/PDF (multipart) — สูงสุด {{ max_upload_mb }} MB, PDF {{ max_pages }} หน้า</td></tr>
+    <tr><td><code>image_base64</code></td><td data-th="ส่งเป็น JSON แทนไฟล์ได้ (รองรับ data:URL)" data-en="Send JSON instead of a file (data: URLs supported)">ส่งเป็น JSON แทนไฟล์ได้ (รองรับ data:URL)</td></tr>
+    <tr><td><code>scale</code></td><td data-th="<code>auto</code> (แนะนำ) · <code>1</code> · <code>1.5</code> · <code>2</code>" data-en="<code>auto</code> (recommended) · <code>1</code> · <code>1.5</code> · <code>2</code>"><code>auto</code> (แนะนำ) · <code>1</code> · <code>1.5</code> · <code>2</code></td></tr>
+    <tr><td><code>images</code></td><td data-th="<code>0</code> = ไม่ส่งภาพผลลัพธ์กลับ (เร็ว/ประหยัดแบนด์วิดท์)" data-en="<code>0</code> = don't return the annotated image (faster, smaller)"><code>0</code> = ไม่ส่งภาพผลลัพธ์กลับ (เร็ว/ประหยัดแบนด์วิดท์)</td></tr>
+    <tr><td><code>settings</code></td><td data-th="JSON ปรับละเอียด เช่น <code>{&quot;rec&quot;:{&quot;drop_below&quot;:0.85}}</code> (ดูตารางถัดไป)" data-en="Fine-tuning JSON, e.g. <code>{&quot;rec&quot;:{&quot;drop_below&quot;:0.85}}</code> (see the next table)">JSON ปรับละเอียด เช่น <code>{"rec":{"drop_below":0.85}}</code></td></tr>
+  </table>
+
+  <h3 data-th="settings ที่ใช้บ่อย" data-en="Common settings">settings ที่ใช้บ่อย</h3>
+  <table>
+    <tr><th data-th="คีย์" data-en="Key">คีย์</th><th data-th="ขอบเขต" data-en="Range">ขอบเขต</th><th data-th="ผล" data-en="Effect">ผล</th></tr>
+    <tr><td><code>rec.drop_below</code></td><td>0–1</td><td data-th="ตัดบรรทัดที่ความมั่นใจต่ำกว่า (เช่น 0.85)" data-en="Drop lines below this confidence (e.g. 0.85)">ตัดบรรทัดที่ความมั่นใจต่ำกว่า (เช่น 0.85)</td></tr>
+    <tr><td><code>rec.min_chars</code></td><td>0–50</td><td data-th="ตัดบรรทัดสั้นเกิน" data-en="Drop lines shorter than this">ตัดบรรทัดสั้นเกิน</td></tr>
+    <tr><td><code>rec.junk_below</code> / <code>rec.junk_invalid</code></td><td>0–1</td><td data-th="ตัดของรก/ตัวสะกดเสีย" data-en="Drop junk / badly spelled lines">ตัดของรก/ตัวสะกดเสีย</td></tr>
+    <tr><td><code>det.split_gap</code></td><td>0–4</td><td data-th="แยกบรรทัดที่ติดกัน (สัดส่วนความสูงบรรทัด)" data-en="Split merged lines (fraction of line height)">แยกบรรทัดที่ติดกัน (สัดส่วนความสูงบรรทัด)</td></tr>
+    <tr><td><code>det.limit</code></td><td data-th="จำนวนบรรทัดสูงสุด" data-en="max lines">จำนวนบรรทัดสูงสุด</td><td data-th="จำกัดจำนวนบรรทัดต่อหน้า" data-en="Limit lines per page">จำกัดจำนวนบรรทัดต่อหน้า</td></tr>
+    <tr><td><code>rec.batch</code></td><td>1–64</td><td data-th="จำนวนบรรทัดต่อรอบประมวลผล (เร็วขึ้นถ้า CPU ไหว)" data-en="Lines per forward pass (higher is faster)">จำนวนบรรทัดต่อรอบประมวลผล (เร็วขึ้นถ้า CPU ไหว)</td></tr>
+  </table>
+  <div class="note" data-th="ค่าเริ่มต้นปรับได้ในไฟล์ <code>models/config.json</code> — ส่ง <code>settings</code> มาเฉพาะค่าที่อยากเปลี่ยน"
+       data-en="Defaults live in <code>models/config.json</code> — send only the <code>settings</code> you want to override.">ค่าเริ่มต้นปรับได้ในไฟล์ <code>models/config.json</code> — ส่ง <code>settings</code> มาเฉพาะค่าที่อยากเปลี่ยน</div>
+
+  <h2 data-th="6. งานเบื้องหลัง (PDF หลายหน้า)" data-en="6. Background jobs (multi-page PDFs)">6. งานเบื้องหลัง (PDF หลายหน้า)</h2>
+  <p data-th="สร้างงาน → ถามความคืบหน้าจนสถานะเป็น <code>done</code> → อ่านผลลัพธ์ (หรือยกเลิก)" data-en="Create a job → poll until status is <code>done</code> → read the result (or cancel).">สร้างงาน → ถามความคืบหน้าจนสถานะเป็น <code>done</code> → อ่านผลลัพธ์ (หรือยกเลิก)</p>
+<pre><button class="copy">คัดลอก</button><code>curl -s -X POST http://127.0.0.1:5000/api/jobs -F "file=@book.pdf"
+# => {"ok":true,"job_id":"ab12cd34","total":12}
+
+curl -s http://127.0.0.1:5000/api/jobs/ab12cd34
+# => {"ok":true,"status":"running","progress":{"done":5,"total":12}}
+
+curl -s http://127.0.0.1:5000/api/jobs/ab12cd34
+# => {"ok":true,"status":"done","progress":{"done":12,"total":12},
+#     "result_id":"ab12cd34","text":"...","pages":[...]}
+
+curl -s -X POST http://127.0.0.1:5000/api/jobs/ab12cd34/cancel</code></pre>
+
+  <h2 data-th="7. ข้อผิดพลาดและขีดจำกัด" data-en="7. Errors and limits">7. ข้อผิดพลาดและขีดจำกัด</h2>
+  <table>
+    <tr><th>HTTP</th><th data-th="ความหมาย" data-en="Meaning">ความหมาย</th></tr>
+    <tr><td>400</td><td data-th="ไฟล์ว่าง/นามสกุลไม่รองรับ/PDF เกินหน้า" data-en="Empty file, unsupported extension, too many pages">ไฟล์ว่าง/นามสกุลไม่รองรับ/PDF เกินหน้า</td></tr>
+    <tr><td>401</td><td data-th="เปิด LAN mode แล้วไม่ส่ง API key หรือ key ผิด" data-en="LAN mode on and the API key is missing or wrong">เปิด LAN mode แล้วไม่ส่ง API key หรือ key ผิด</td></tr>
+    <tr><td>404</td><td data-th="ไม่พบผลลัพธ์/งาน (หมดอายุ)" data-en="Result/job not found (expired)">ไม่พบผลลัพธ์/งาน (หมดอายุ)</td></tr>
+    <tr><td>413</td><td data-th="ไฟล์ใหญ่เกิน {{ max_upload_mb }} MB" data-en="File larger than {{ max_upload_mb }} MB">ไฟล์ใหญ่เกิน {{ max_upload_mb }} MB</td></tr>
+    <tr><td>500</td><td data-th="อ่านไฟล์ไม่สำเร็จ (ดูรายละเอียดใน logs)" data-en="Could not read the file (see logs)">อ่านไฟล์ไม่สำเร็จ (ดูรายละเอียดใน logs)</td></tr>
+  </table>
+
+  <h2 data-th="8. เฝ้าโฟลเดอร์ (ไม่ต้องเขียนโค้ด)" data-en="8. Watch folder (no code needed)">8. เฝ้าโฟลเดอร์ (ไม่ต้องเขียนโค้ด)</h2>
+<pre><code>python app.py --watch "D:\inbox" --watch-out "D:\outbox" --watch-interval 5
+OpenThai2OCR.exe --watch "D:\inbox" --watch-out "D:\outbox" --no-browser</code></pre>
+  <p data-th="ไฟล์ใหม่ใน <code>D:\inbox</code> จะถูกอ่านแล้วเขียน <code>ชื่อ-ocr.txt</code>, <code>ชื่อ-ocr.docx</code>, <code>ชื่อ-ocr.json</code> ลง <code>D:\outbox</code> (ต้นฉบับไม่ถูกย้าย)"
+     data-en="New files in <code>D:\inbox</code> are OCR'd into <code>name-ocr.txt</code>, <code>name-ocr.docx</code> and <code>name-ocr.json</code> in <code>D:\outbox</code> (originals are left in place).">ไฟล์ใหม่ใน <code>D:\inbox</code> จะถูกอ่านแล้วเขียน <code>ชื่อ-ocr.txt</code>, <code>ชื่อ-ocr.docx</code>, <code>ชื่อ-ocr.json</code> ลง <code>D:\outbox</code> (ต้นฉบับไม่ถูกย้าย)</p>
+
+  <h2 data-th="9. ทดลองยิงจริง" data-en="9. Try it live">9. ทดลองยิงจริง</h2>
+  <p data-th="เปิดหน้า <a href=&quot;/playground&quot;>ทดสอบ API</a> เพื่ออัปโหลดภาพและดู JSON ที่ตอบกลับจริงในเบราว์เซอร์นี้"
+     data-en="Open the <a href=&quot;/playground&quot;>API playground</a> to upload an image and inspect the real JSON response in this browser.">เปิดหน้า <a href="/playground">ทดสอบ API</a> เพื่ออัปโหลดภาพและดู JSON ที่ตอบกลับจริงในเบราว์เซอร์นี้</p>
+</main>
+
+<script>
+  let lang = localStorage.getItem("ocrLang") || "th";
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-th]").forEach(el => {
+      el.innerHTML = lang === "en" ? el.dataset.en : el.dataset.th;
+    });
+    document.getElementById("langBtn").textContent = lang === "th" ? "EN" : "ไทย";
+  }
+  document.getElementById("langBtn").onclick = () => {
+    lang = lang === "th" ? "en" : "th";
+    localStorage.setItem("ocrLang", lang);
+    applyLang();
+  };
+
+  const origin = location.origin.startsWith("file:") ? "http://127.0.0.1:5000" : location.origin;
+  document.getElementById("baseUrl").textContent = origin;
+  document.querySelectorAll("pre").forEach(el => {
+    el.innerHTML = el.innerHTML.replaceAll("http://127.0.0.1:5000", origin);
+  });
+
+  const tabs = document.getElementById("codeTabs");
+  tabs.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-code]");
+    if (!btn) return;
+    tabs.querySelectorAll("button").forEach(b => b.classList.toggle("act", b === btn));
+    document.querySelectorAll(".codeblock").forEach(b =>
+      b.classList.toggle("hidden", b.dataset.code !== btn.dataset.code));
+  });
+
+  document.querySelectorAll("pre .copy").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const text = btn.parentElement.querySelector("code").innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = lang === "th" ? "คัดลอกแล้ว" : "Copied";
+      } catch {
+        btn.textContent = lang === "th" ? "คัดลอกไม่ได้" : "Copy failed";
+      }
+      setTimeout(() => btn.textContent = lang === "th" ? "คัดลอก" : "Copy", 1500);
+    });
+  });
+
+  applyLang();
+</script>
+</body>
+</html>

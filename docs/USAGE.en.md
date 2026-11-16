@@ -127,6 +127,26 @@ The "Image scale" selector above the OCR button:
 - **Quit** button (top right) stops the server - no Task Manager needed
 - Version is shown at the top right
 
+## 5.1 New pages in the web UI
+
+| Page | What it does |
+|---|---|
+| `/` | OCR images and PDFs (the original page) |
+| `/docs` | API guide: every endpoint, curl / Python / JS / PHP / C# samples, common `settings` |
+| `/playground` | Live API tester — upload, inspect text/JSON/timing, copy curl, download exports |
+| `/status` | System status (version, uptime, model, watch folder, recent jobs), refreshes every 3 s |
+
+All pages share the **EN / ไทย** toggle (same language setting)
+
+## 5.2 Running without opening a browser
+
+- One time: `OpenThai2OCR.exe --no-browser` (or `python app.py --no-browser`)
+- Remembered: untick **Open browser on start** on the first page → saved to `settings.json`
+  next to the executable (falls back to `%LOCALAPPDATA%\OpenThai2OCR\settings.json`)
+- Force it on again: `--browser`
+- Headless + watch folder:
+  `OpenThai2OCR.exe --no-browser --watch "D:\inbox" --watch-out "D:\outbox"`
+
 ## 6. Using it from other programs (API)
 
 Keep the app open, then call:

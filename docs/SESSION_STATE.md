@@ -167,3 +167,45 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 - `0bc254d` (ci: fix secrets context in release signing step)
 - `b9ad450` (docs: add v1.2.0 release notes)
 - version: 1.2.0 — tag `v1.2.0` ปล่อยแล้ว (release id 446700332)
+## Session 5 (v1.3.0 — หัวข้อ: หน้า API guide / playground / status + ไม่เปิดเบราว์เซอร์) — 2026-11-16
+
+## Objective
+เพิ่มหน้าใหม่ในเว็บ (สอนใช้ API, ทดสอบ API, สถานะ) และทำตัวเลือก "รัน UI โดยไม่เปิดเบราว์เซอร์" ให้จำค่าได้
+
+## Completed
+- **หน้า `/docs`** (`templates/docs.html`) — คู่มือเชื่อมต่อ API: endpoint ทั้งหมด, ตัวอย่าง
+  curl/Python/JavaScript/PHP/C#, รูปแบบคำตอบ, `settings` ที่ใช้บ่อย, jobs, errors, watch folder,
+  ปุ่มคัดลอกโค้ด, สลับไทย/อังกฤษ (data-th/data-en + localStorage `ocrLang` ร่วมกับหน้าแรก)
+- **หน้า `/playground`** (`templates/playground.html`) — ยิง `/api/ocr` จริงจากเบราว์เซอร์:
+  drag-drop ไฟล์, scale, settings JSON (ตรวจ JSON ก่อนส่ง), `images=0`, แสดงข้อความ/JSON/สรุป
+  (HTTP, เวลา, timing, confidence), คัดลอก curl, ลิงก์ดาวน์โหลด export, กรอก API key ถ้าเปิด LAN
+- **หน้า `/status`** (`templates/status.html`) — version/uptime/โมเดล/โหมด key/limits/watch folder
+  + ตารางงานล่าสุด 20 งาน จาก `GET /api/status` (รีเฟรชเองทุก 3 วินาที)
+- **ไม่เปิดเบราว์เซอร์อัตโนมัติ (จำค่า)** — `settings.json` ข้าง exe (fallback
+  `%LOCALAPPDATA%\OpenThai2OCR\settings.json`), `--no-browser` / `--browser` (CLI ชนะค่าที่จำ),
+  checkbox ในหน้าแรก → `POST /api/prefs`; `/api/prefs` + `/api/status` ใหม่, `/api/health` เพิ่ม `uptime_s`
+- เมนูนำทาง 4 หน้า (OCR / สอนใช้ API / ทดสอบ API / สถานะ) + อัปเดตปุ่ม lang ให้ทั้ง 4 หน้า
+- เอกสาร: README (หน้าใหม่ + --browser), USAGE/API ไทย-อังกฤษ, CHANGELOG v1.3.0
+- tests เพิ่ม 3 เคส (12 ผ่านทั้งหมด) · ตรวจด้วยเบราว์เซอร์จริงทุกหน้า + playground ยิง OCR สำเร็จ
+  + prefs บันทึก/อ่านข้าม restart (ไม่เปิดเบราว์เซอร์ตามค่า)
+
+## ข้อควรระวังที่เจอ
+- Flask cache template ตอนไม่ debug → แก้ template ต้องรีสตาร์ตเซิร์ฟเวอร์ก่อนทดสอบ (เจอซ้ำ)
+- `.hidden` ต้องประกาศใน CSS ของแต่ละหน้า (docs.html ลืมรอบแรก → ทุกแท็บโค้ดโผล่พร้อมกัน)
+- `os.access(BASE, W_OK)` ใช้ตัดสิน fallback ได้ไม่แน่เสมอ → `save_prefs` เพิ่ม try/except
+  เขียน BASE ก่อน แล้ว fallback LOCALAPPDATA
+- CSS `.card .v` specificity ชนะ `.ok` → ต้องเขียน `.card .v.ok` ถึงจะได้สีเขียว/แดง
+
+## Active
+- ไม่มี — โค้ด v1.3.0 พร้อม (ยังไม่ build exe/tag)
+
+## Blocked
+- เช่นเดิม: code signing ยังไม่มีใบรับรอง · อ่านภาพโดยตรงไม่ได้ (ตรวจผ่านเบราว์เซอร์เท่านั้น)
+
+## Next Move
+- build exe v1.3.0 + ทดสอบ (`--no-browser` + prefs) → tag `v1.3.0` → release notes + patch SHA
+- ถ้าจะเซ็นจริง: ใส่ secret `WINDOWS_PFX_BASE64` + `WINDOWS_PFX_PASSWORD` ก่อน push tag
+
+## commit ล่าสุด
+- `a6d2696` (docs: fill v1.2.0 SHA256 table and session state)
+- version: 1.3.0 (ในโค้ด) — ยังไม่ tag/release

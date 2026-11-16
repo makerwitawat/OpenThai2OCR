@@ -38,10 +38,20 @@
 ```bash
 python -m pip install -r requirements.txt
 python app.py                # เปิด http://127.0.0.1:5000
-python app.py --no-browser   # ไม่เปิดเบราว์เซอร์
+python app.py --no-browser   # ไม่เปิดเบราว์เซอร์ (จำค่าได้ในหน้าเว็บ)
+python app.py --browser      # บังคับเปิดเบราว์เซอร์ (ข้ามค่าที่จำไว้)
 python app.py --host 0.0.0.0 --port 8080   # ให้เครื่องอื่นใน LAN เรียกได้
 python app.py --watch "D:\inbox"           # เฝ้าโฟลเดอร์ แล้วอ่านไฟล์ใหม่อัตโนมัติ
 ```
+
+### หน้าในเว็บ
+
+| หน้า | ใช้ทำอะไร |
+|---|---|
+| `/` | อ่าน OCR จากรูป/PDF |
+| `/docs` | สอนเชื่อมต่อ API + ตัวอย่างโค้ด curl / Python / JS / PHP / C# |
+| `/playground` | ยิงคำขอ OCR จริงจากเบราว์เซอร์ ดู JSON/เวลา/ความมั่นใจ และดาวน์โหลดผล |
+| `/status` | สถานะระบบ งานล่าสุด watch folder และขีดจำกัด |
 
 ## build เป็น exe
 

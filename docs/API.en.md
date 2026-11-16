@@ -18,13 +18,17 @@ It listens on `127.0.0.1:5000` by default (this machine only).
 
 ## Endpoints
 
+> The app ships with a guide and a live tester: `http://127.0.0.1:5000/docs` (API guide) and
+> `http://127.0.0.1:5000/playground` (send real requests, inspect JSON/timing).
+
 ### `GET /api/health`
 
 ```json
 {
   "ok": true,
   "app": "openthai2ocr",
-  "version": "1.2.0",
+  "version": "1.3.0",
+  "uptime_s": 128.4,
   "model_dir": "D:\\...\\models",
   "model_ready": true,
   "auth_required": false,
@@ -32,6 +36,35 @@ It listens on `127.0.0.1:5000` by default (this machine only).
   "limits": {"max_upload_mb": 100, "max_pages": 50}
 }
 ```
+
+### `GET /api/status`
+
+Full status for `/status`: adds `results_cached` and `jobs` (last 20)
+
+```json
+{
+  "ok": true,
+  "version": "1.3.0",
+  "uptime_s": 128.4,
+  "open_browser": true,
+  "results_cached": 2,
+  "jobs": [{"id": "ab12cd34", "name": "book.pdf", "status": "running",
+            "progress": {"done": 5, "total": 12}, "error": "", "created": 1760000000.0}]
+}
+```
+
+### `GET` / `POST /api/prefs`
+
+Read/save app preferences (stored in `settings.json` next to the exe)
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/prefs \
+  -H "Content-Type: application/json" -d '{"open_browser": false}'
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `open_browser` | bool | Open the browser automatically on the next start |
 
 ### `POST /api/ocr` — file upload (multipart, field name `file`)
 
