@@ -50,6 +50,11 @@ gh release upload v1.0.0 dist/OpenThai2OCR-linux-x64 --clobber
 ## เซ็นชื่อ exe (code signing)
 
 ถ้ามีใบรับรอง code signing จะลดคำเตือน "Windows protected your PC" ได้
+(ปัจจุบัน **ยังไม่ได้เซ็น** — ผู้ใช้ดูวิธีเปิดได้ใน README หัวข้อ "ถ้า Windows / macOS เตือนตอนเปิดครั้งแรก")
+
+> ข้อควรรู้ (ตรวจเมื่อ 2026-11): CA สาธารณะออกใบรับรองใหม่โดยเก็บกุญแจในฮาร์ดแวร์ (โทเค็น/HSM) อายุสูงสุด 459 วัน
+> จึงมักไม่ได้ไฟล์ .pfx ให้ใส่ GitHub secret · ทางที่เหมาะกับโปรเจกต์โอเพนซอร์สนี้คือ SignPath Foundation (ฟรี)
+> ส่วน Azure Artifact Signing ยังไม่รองรับผู้พัฒนาในไทย — ถ้าจะใช้ SignPath ต้องปรับขั้นเซ็นใน `release.yml`
 สคริปต์ `tools/sign_exe.ps1` หา `signtool.exe` ให้เอง (จาก PATH หรือ Windows Kits)
 
 ```powershell

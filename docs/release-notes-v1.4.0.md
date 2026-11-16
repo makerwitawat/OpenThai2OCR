@@ -17,7 +17,8 @@
 ### 📥 วิธีอัปเดต / ติดตั้ง
 - **Windows**: ดาวน์โหลด `OpenThai2OCR-windows-x64.exe` วางที่โฟลเดอร์ไหนก็ได้ แล้วดับเบิลคลิก
 - **Linux**: ดาวน์โหลด `OpenThai2OCR-linux-x64` แล้ว `chmod +x` และรัน
-- **macOS**: ดาวน์โหลด `OpenThai2OCR-macos-*` แล้วรัน (ถ้าโดนกักกัน: คลิกขวา → Open)
+- **macOS**: ดาวน์โหลด `OpenThai2OCR-macos-*` แล้วรัน (ถ้าโดนกักกัน: คลิกขวา → Open หรือ `xattr -d com.apple.quarantine <ไฟล์>`)
+- **ไฟล์ยังไม่ได้เซ็นดิจิทัล**: Windows อาจขึ้น "Windows protected your PC" ให้กด **More info → Run anyway** (ตรวจ SHA256 ด้านล่างได้) — รายละเอียดใน [README](https://github.com/makerwitawat/OpenThai2OCR#ถ้า-windows--macos-เตือนตอนเปิดครั้งแรก)
 - อัปเดตจาก v1.3.x: ปิดโปรแกรมเดิมแล้วแทนไฟล์ด้วยไฟล์ใหม่ ไม่ต้องย้ายข้อมูลใด ๆ
 - รันจากซอร์ส: `python -m pip install -r requirements.txt` แล้ว `python app.py`
 

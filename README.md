@@ -33,6 +33,30 @@
 
 > ครั้งแรกอาจใช้เวลาหลายวินาทีเพราะต้องแตกไฟล์ภายในออกมาที่ temp
 
+### ถ้า Windows / macOS เตือนตอนเปิดครั้งแรก
+
+ไฟล์ที่ปล่อยยัง **ไม่ได้เซ็นดิจิทัล (code signing)** จึงอาจเจอคำเตือน — ไม่ได้แปลว่าไฟล์อันตราย:
+
+| ระบบ | อาการ | วิธีเปิด |
+|---|---|---|
+| Windows | "Windows protected your PC" / Unknown publisher | กด **More info** → **Run anyway** |
+| Windows | แอนตี้ไวรัสบางตัวแจ้งผิด (false positive) | ตรวจ SHA256 (ด้านล่าง) แล้วเพิ่มไฟล์เป็นข้อยกเว้น |
+| macOS | "ไม่สามารถเปิดได้เพราะไม่ทราบผู้พัฒนา" | คลิกขวาที่ไฟล์ → **Open** หรือรัน `xattr -d com.apple.quarantine ./OpenThai2OCR-macos-arm64` |
+| Linux | รันไม่ได้ (Permission denied) | `chmod +x ./OpenThai2OCR-linux-x64` |
+
+**ตรวจว่าไฟล์ไม่ถูกแก้ไข:** เทียบ SHA256 กับตารางในหน้า release ของเวอร์ชันนั้น
+
+```powershell
+Get-FileHash .\OpenThai2OCR-windows-x64.exe -Algorithm SHA256
+```
+
+```bash
+sha256sum ./OpenThai2OCR-linux-x64        # macOS: shasum -a 256 <ไฟล์>
+```
+
+ไฟล์ทุกตัวถูก build โดย GitHub Actions จากซอร์สโค้ดสาธารณะใน repo นี้ (ดู [release.yml](.github/workflows/release.yml))
+และผ่านการทดสอบรันจริงก่อนปล่อยทุกครั้ง
+
 ## รันจากซอร์สโค้ด (ทุก OS)
 
 ```bash

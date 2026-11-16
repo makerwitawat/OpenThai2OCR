@@ -421,8 +421,11 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 - ยืนยันบน CI: release (workflow_dispatch, run 43869907951) ผ่านทั้ง 3 OS รวมขั้น smoke exe · publish ข้าม
 - พิสูจน์แล้ว: branch ทดลองที่ test ล้ม → API tests ล้ม, build/publish ไม่รัน (run 43870963213) · ลบ branch แล้ว
 
+- เอกสารไฟล์ไม่เซ็น: README หัวข้อ "ถ้า Windows / macOS เตือนตอนเปิดครั้งแรก" · BUILD.md หมายเหตุ .pfx ฮาร์ดแวร์ · patch release notes v1.4.0 บน GitHub แล้ว
+- ผลสำรวจใบรับรอง: .pfx ดาวน์โหลดแทบไม่มีแล้ว · Azure ไม่รองรับไทย · ทางเลือกฟรี = SignPath Foundation (Apache-2.0 ผ่าน แต่ต้องตรวจใบอนุญาตโมเดล iApp ใน models/*.onnx ก่อนสมัคร)
+
 ## Active
-- ไม่มี (CHANGELOG/CHECKLIST/SESSION_STATE อัปเดตแล้ว รอ commit docs)
+- ไม่มี
 
 ## Next Move
 - รวมไปกับ release ถัดไป (v1.4.1 หรือพร้อมงานอื่น)
