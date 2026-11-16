@@ -436,3 +436,45 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 
 ## commit ล่าสุด
 - 9663a75 · version: 1.4.0 (โค้ดยังไม่บัมพ์)
+
+
+---
+
+## Session 12 (เปิดช้า + ปล่อย v1.5.0) — 2026-11-16
+
+## Objective
+แก้ "กดรัน exe แล้วรอนานกว่า GUI จะขึ้น" → วัด/แก้ → build ใหม่ → ปล่อย release v1.5.0
+
+## ข้อสำคัญ
+- สาเหตุหลัก (ไม่ใช่การแตกไฟล์ onefile — onedir ก็ช้าเท่ากัน): `_existing_instance` ยิง `/api/health` ไล่ 11 พอร์ต (5000–5010) พอร์ตละ timeout 0.7 วิ · บน Windows พอร์ตว่างไม่ refuse ทันที → ≈8 วิ · เห็นในช่องว่างระหว่างบรรทัด `config:` กับ `serving on` ของ log
+- รอง: โหมด `--window` มี `time.sleep(0.8)` ตายตัว
+
+## Completed (+commit)
+- `main()` เช็ก `_port_free` (bind) ก่อน แล้วยิง health เฉพาะพอร์ตที่มีคนจับ · เพิ่ม `_wait_port` แทน sleep 0.8 — `abf7972`
+- วัดจาก exe จริง: เซิร์ฟเวอร์พร้อม onefile 9.7 → ~2 วิ · onedir 8.5 → ~0.6 วิ · หน้าต่างขึ้น (onefile) 3.6–6.8 → 2.3–3.2 วิ
+- onefile ที่เหลือ ~1.4 วิ = แตกไฟล์ 215 MB (213 ไฟล์) ลง temp (cv2.pyd 71 MB, onnxruntime 44 MB, mupdf 25 MB, openblas 20 MB) — ตัดไม่ได้ถ้ายังเป็นไฟล์เดียว
+- bump 1.5.0 · CHANGELOG · BUILD/USAGE (th/en) · API example · CHECKLIST Phase D
+- tag `v1.5.0` (commit `abf7972`) → CI release 3 OS ผ่าน · release id 447176560 · notes + SHA256 ใน `docs/release-notes-v1.5.0.md` · PATCH ผ่าน `release-notes-patch.py` ตรวจ `.checked` แล้ว
+  - windows `e6629f02…c657` (86.6 MiB) · linux `0b112aaa…ecad` · macos `40c03209…f2b7`
+
+## ข้อควรระวังที่เจอ
+- เครื่องนี้วัดเวลาด้วย `--no-browser` ไม่นับช่วงเปิดหน้าต่าง → ใช้ EnumWindows หา title "OpenThai2.0 OCR" แทน
+- `dist\OpenThai2OCR\` (onedir) ที่ build ไว้ในเครื่องยังเป็นโค้ดก่อนเอา sleep ออก (build ใหม่ถ้าจะวัด/แจก)
+- `dist\OpenThai2OCR.exe` ในเครื่อง = build ของเครื่อง ไม่ใช่ asset ที่ปล่อย (SHA ต่างกัน)
+- `.claude/HANDOFF.md` เป็นไฟล์ untracked ของ session อื่น — ไม่ได้ commit
+
+## Active
+- ไม่มี
+
+## Blocked
+- Phase C: เซ็น exe — รอ .pfx
+
+## Next Move
+- ถ้าต้องการเปิดเร็วกว่า ~2 วิในไฟล์เดียว: ทำ launcher แตกไฟล์ครั้งเดียวไป `%LOCALAPPDATA%` (ยังไม่ได้ตัดสินใจ — เสี่ยง/ซับซ้อน) หรือแจกแบบ onedir
+- เช็กมือในหน้าต่างแอป (WebView2) ที่ค้างอยู่
+
+## คำสั่งยืนยัน
+- `python -m pytest -q` (73 ผ่าน) · `build_exe.bat --skip-tests` · วัดเวลา: Start-Process exe `--window --port 18765` แล้วรอหน้าต่าง "OpenThai2.0 OCR"
+
+## commit ล่าสุด
+- `abf7972` — tag `v1.5.0` · version: 1.5.0 — release แล้ว (release id 447176560)
