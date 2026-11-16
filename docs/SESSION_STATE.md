@@ -369,3 +369,42 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 ## commit ล่าสุด
 - `91e3f14` (docs: add v1.3.1 release notes) — tag `v1.3.1`
 - version: 1.3.1 — release แล้ว (release id 446981212)
+
+## Session 10 (แผนปรับปรุง v1.3.2 → v1.4.0) — 2026-11-16
+
+## Objective
+ทำตาม `docs/PLAN.md` ทั้งหมด: แพตช์ v1.3.2 แล้วฟีเจอร์ v1.4.0 (ตัวติดตาม: `docs/CHECKLIST.md`)
+
+## ข้อสำคัญ
+- OCR หลายไฟล์/PDF หลายหน้า/progress **มีอยู่แล้ว** (ตัดออกจากแผน)
+- ผู้ใช้เลือก: ยังไม่มีใบรับรอง (Phase C blocked) · แยก 2 release · export ใช้ข้อความที่แก้
+- ผลตกลง: instance ต่างเวอร์ชัน = ไม่ผูกต่อ (ข้ามไปพอร์ตถัดไป)
+
+## Completed
+- **v1.3.2** (tag `v1.3.2`, commit `51fd6fd`): `_existing_instance` เทียบเวอร์ชัน (+ e2e จริง 5700→5701) ·
+  `release.yml` รัน pytest · `tests/test_port.py` · แก้ `assert` เยื้องผิดใน `test_watch_folder` (`3e43923`)
+- **v1.4.0** (tag `v1.4.0`, commit `0ace78d`):
+  - export POST `{"text"}` (`_apply_edit`, `_edited_lines`) → PDF/CSV/DOCX/JSON/TXT ใช้ข้อความที่แก้
+  - `/api/update-check` + แถบแจ้ง + prefs `update_check` (ทดสอบกับ GitHub จริง)
+  - กรอบ SVG คลิกได้ (`overlay=0`, `pages[].size`) ภาพ ↔ ข้อความ ↔ รายบรรทัด
+  - `OpenThai2OCR.spec` ตัด pymupdf layout onnx / mupdf-devel / opencv ffmpeg → Windows 151→95 MB, Linux 191→148, macOS 155→113
+  - tests 39 ตัว · docs API/USAGE/`/docs` อัปเดต
+- Release ทั้งสองมี SHA ใน notes + ตรวจ `.checked` แล้ว · `dist/OpenThai2OCR.exe` = asset v1.4.0 (`860d3230…9797`, 95 MB)
+
+## Active
+- ไม่มี
+
+## Blocked
+- Phase C: เซ็น exe — รอใบรับรอง .pfx (ใส่ secrets `WINDOWS_PFX_BASE64` / `WINDOWS_PFX_PASSWORD` แล้วออก patch release)
+
+## Next Move
+- เช็กด้วยมือในหน้าต่างแอป (WebView2): ปุ่มดาวน์โหลดขึ้น Save dialog, คัดลอก, คลิกกรอบบนภาพ
+- ข้อเสนอเล็ก: lightbox แสดงกรอบ · smoke test รัน exe จริงใน CI · พิสูจน์ว่า pytest ล้ม → release ล้ม
+
+## คำสั่งยืนยัน
+- `python -m pytest -q` (39 ผ่าน) · `python tools/smoke_test.py`
+- build ทดลอง: `python -m PyInstaller OpenThai2OCR.spec --noconfirm --clean --distpath dist_next --workpath .tmp\build`
+
+## commit ล่าสุด
+- `0ace78d` (feat(v1.4.0)) — tag `v1.4.0` · version: 1.4.0 — release แล้ว (release id RE_kwDOVv4pB84apOin)
+
