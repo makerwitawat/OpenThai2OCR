@@ -417,12 +417,16 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 - lightbox (ภาพเต็มจอ) มีกรอบ SVG คลิกเลือกบรรทัดได้ · ไฮไลต์ซิงก์ภาพหลัก/ช่องข้อความ · คลิกที่ว่างปิด (แก้ 	emplates/index.html เท่านั้น)
 - ทดสอบจริงด้วย Playwright (banner.png 3 บรรทัด) + pytest 39 ผ่าน · CHANGELOG (หัว "ยังไม่ปล่อย") + CHECKLIST อัปเดต
 
+- commit `ad56812` (lightbox) + `9663a75` (CI smoke test exe: `tools/exe_smoke.py` ในขั้น release.yml · publish รันเฉพาะ tag)
+- ยืนยันบน CI: release (workflow_dispatch, run 43869907951) ผ่านทั้ง 3 OS รวมขั้น smoke exe · publish ข้าม
+- พิสูจน์แล้ว: branch ทดลองที่ test ล้ม → API tests ล้ม, build/publish ไม่รัน (run 43870963213) · ลบ branch แล้ว
+
 ## Active
-- การแก้ยัง **ไม่ commit** (ไฟล์: templates/index.html, CHANGELOG.md, docs/CHECKLIST.md, docs/SESSION_STATE.md)
+- ไม่มี (CHANGELOG/CHECKLIST/SESSION_STATE อัปเดตแล้ว รอ commit docs)
 
 ## Next Move
-- commit แล้วรวมไปกับ release ถัดไป (v1.4.1 หรือพร้อมงานอื่น)
-- ยังค้าง: เช็กมือในหน้าต่างแอป (WebView2) · smoke test exe ใน CI · พิสูจน์ pytest ล้ม → release ล้ม · Phase C (รอ .pfx)
+- รวมไปกับ release ถัดไป (v1.4.1 หรือพร้อมงานอื่น)
+- ยังค้าง: เช็กมือในหน้าต่างแอป (WebView2 — ต้องคนกด) · Phase C เซ็น exe (รอ .pfx)
 
 ## commit ล่าสุด
-- ebed9d1 · version: 1.4.0 (โค้ดยังไม่บัมพ์)
+- 9663a75 · version: 1.4.0 (โค้ดยังไม่บัมพ์)

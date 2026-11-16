@@ -6,7 +6,7 @@
 - [x] A1 `_existing_instance` เทียบ `version` จาก `/api/health` · ต่างเวอร์ชัน → ข้ามไปพอร์ตถัดไป + log เตือน
 - [x] A2 `tests/test_port.py` ครอบ 4 กรณี (ตรง/ต่าง/ต่างแล้วตามด้วยตรง/ไม่ใช่แอปเรา+error)
 - [x] A3 `release.yml` รัน pytest ก่อน build (ติดตั้ง requirements-dev ด้วย)
-  - ยังไม่ได้พิสูจน์ว่า test ล้ม → release ล้มจริงด้วย branch ทดลอง (เชื่อตามพฤติกรรม GitHub Actions: step ล้ม = job ล้ม = `publish` ไม่รัน)
+  - พิสูจน์แล้ว (2026-11-16): branch ทดลองที่มี test ล้ม → ขั้น API tests ล้ม · build/publish ไม่รัน (run 43870963213) · ลบ branch แล้ว
 - [x] A4 CHANGELOG + release notes v1.3.2 → tag → CI → SHA → patch script → ตรวจ `.checked` ด้วย Read
 - [x] DoD A: ทดสอบ e2e — เปิด instance เวอร์ชัน 1.3.1 ที่ 5700 แล้วรันตัวใหม่ `--port 5700` → ได้ 5701 (1.3.2) · pytest ผ่านบน CI · SHA ตรง `dist/OpenThai2OCR.exe`
 
@@ -18,7 +18,7 @@
   - ข้อจำกัด: lightbox (คลิกภาพเต็มจอ) แสดงภาพเปล่าไม่มีกรอบ · ไฮไลต์ในช่องข้อความหาจากข้อความตามลำดับ (หลังผู้ใช้แก้ข้อความอาจหาไม่เจอ = ไม่ไฮไลต์)
 - [x] B4 วัดขนาด exe: ตัวกินพื้นที่คือ `pymupdf/layout/resources/onnx` (~38 MB), `opencv_videoio_ffmpeg` (13 MB), `mupdf-devel` → ตัดใน spec · Windows CI 151 → 95 MB, Linux 191 → 148, macOS 155 → 113
 - [x] B5 test: 39 ตัว (export แก้ข้อความ, update-check mock, overlay/size, PDF 2 หน้า) · รัน exe จริงด้วย `--port`: อ่านภาพ + PDF 2 หน้า + export 5 รูปแบบ + export แก้ข้อความ + update-check + โหมด `--window` เปิดได้
-  - ยังไม่ได้เพิ่ม smoke test รัน exe จริงเข้า CI (ทดสอบด้วยมือผ่านสคริปต์ชั่วคราวเท่านั้น)
+  - เพิ่ม smoke test รัน exe จริงใน release.yml แล้ว (`tools/exe_smoke.py`) · ผ่านทั้ง 3 OS (run 43869907951)
 - [x] B6 `docs/API*.md`, `USAGE*.md`, `/docs` อัปเดต · CHANGELOG + release v1.4.0 (SHA กรอกแล้ว, `.checked` ตรวจแล้ว)
 - [x] DoD B: ทดสอบบนเบราว์เซอร์จริง + exe ที่ปล่อย (`dist/OpenThai2OCR.exe` = asset SHA `860d3230…9797`, 95 MB)
 
@@ -29,7 +29,7 @@
 
 ## ค้าง / ข้อเสนอต่อ
 - [ ] เช็กด้วยมือในหน้าต่างแอป: ปุ่มดาวน์โหลดขึ้น Save dialog · ปุ่มคัดลอกใช้ได้ · คลิกกรอบบนภาพ (WebView2 จริง ผมทดสอบได้แค่ว่าหน้าต่างเปิด)
-- [ ] smoke test รัน exe จริง (`--port`) ใน CI
+- [x] smoke test รัน exe จริง (`--port`) ใน CI
 - [x] lightbox แสดงกรอบ + คลิกเลือกบรรทัดได้ (ทำแล้วใน `templates/index.html` ยังไม่ commit/ปล่อย · ทดสอบเบราว์เซอร์จริงด้วย Playwright)
 
 ### คุณภาพขั้นต่ำต่อรายการ (ก่อนขีด ✓)
