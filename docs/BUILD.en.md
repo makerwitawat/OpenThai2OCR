@@ -12,6 +12,20 @@ build_exe_onedir.bat   :: folder       dist\OpenThai2OCR\      (faster startup)
 - **onefile** = easiest to distribute, but extracts to temp on every launch (first page ~2–8 s slower)
 - **onedir** = faster startup, but ships the whole folder (`_internal\` + `models\`)
 
+Both scripts run these steps in order and stop at the first failure:
+
+1. Install dependencies (`requirements.txt` + `-dev` + `-build`)
+2. `pytest -q` - skip with `build_exe.bat --skip-tests`
+3. PyInstaller (`OpenThai2OCR.spec` / `OpenThai2OCR_onedir.spec`)
+4. (onedir) copy `models\` next to the exe
+5. **Smoke-test the built exe** - `tools\exe_smoke.py` launches it with `--no-browser --port 5890`,
+   waits for `/api/health`, runs one OCR request, then shuts it down (CI runs the same step in `release.yml`)
+
+- Uses `.venv\Scripts\python.exe` when present, otherwise `python` from PATH
+- Script messages are English-only (the `.bat` files are pure ASCII) so they never garble on non-Thai Windows
+- Both specs drop the same unused files (`_DROP`) and share the WebView2 hidden imports - **change one spec, change the other**
+- Run from source: `run_web.bat` (extra arguments are passed to `app.py`)
+
 ## Build on Linux / macOS
 
 ```bash
@@ -33,7 +47,12 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-3. The `release` workflow builds all three systems and attaches:
+3. On each OS the `release` workflow runs `pytest` -> model check -> build -> **smoke test of the built binary**
+   (`tools/exe_smoke.py`) -> (Windows: sign if secrets exist) -> attach to the Release.
+   - If any step fails the job stops and `publish` does not run (proven with a throwaway branch containing a failing test)
+   - `publish` runs only on a pushed tag (`workflow_dispatch` on a branch lets you test builds without releasing)
+
+   Attached files:
 
    - `OpenThai2OCR-windows-x64.exe`
    - `OpenThai2OCR-linux-x64`
@@ -78,8 +97,9 @@ automatically (the step is skipped when the secret is absent).
 
 ```bash
 python -m pip install -r requirements-dev.txt
-python -m pytest -q          # 9 API tests
-python tools/smoke_test.py   # real OCR smoke test
+python -m pytest -q          # API / export / etc. (39 tests)
+python tools/smoke_test.py   # real OCR smoke test from source
+python tools/exe_smoke.py dist/OpenThai2OCR.exe   # smoke-test a built exe/binary (--port, --timeout)
 ```
 
 ## Models and assets
@@ -101,5 +121,7 @@ python tools/download_models.py
 | `OpenThai2OCR.spec` | onefile (model embedded) — used by CI |
 | `OpenThai2OCR_onedir.spec` | onedir |
 | `app.ico` | exe icon |
-| `build_exe.bat` | Windows onefile build |
-| `build_exe_onedir.bat` | Windows onedir build |
+| `build_exe.bat` | Windows onefile build (tests -> build -> smoke-test the exe) |
+| `build_exe_onedir.bat` | Windows onedir build (tests -> build -> copy models -> smoke-test the exe) |
+| `run_web.bat` | Run from source on Windows (checks Python/dependencies) |
+| `tools/exe_smoke.py` | Smoke test for a built binary (used by the `.bat` files and CI) |

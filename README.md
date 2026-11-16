@@ -69,6 +69,8 @@ python app.py --host 0.0.0.0 --port 8080   # ให้เครื่องอ�
 python app.py --watch "D:\inbox"           # เฝ้าโฟลเดอร์ แล้วอ่านไฟล์ใหม่อัตโนมัติ
 ```
 
+> Windows: ดับเบิลคลิก `run_web.bat` ก็ได้ (ใช้ `.venv` ถ้ามี · ตรวจ Python/dependency ให้ · ส่งอาร์กิวเมนต์ต่อให้ `app.py` เช่น `run_web.bat --port 5100 --window`)
+
 > ค่าเริ่มต้นของ "เมื่อเริ่มโปรแกรม" (หน้าต่างโปรแกรม / เบราว์เซอร์ / ไม่เปิดอะไร)
 > ตั้งได้ในหน้าแรก และจำไว้ที่ `settings.json` (เขียนทั้งข้าง exe และ
 > `%LOCALAPPDATA%\OpenThai2OCR\settings.json` เพื่อให้ใช้ร่วมกันทุกที่วาง exe)
@@ -88,6 +90,10 @@ python app.py --watch "D:\inbox"           # เฝ้าโฟลเดอร�
 build_exe.bat          :: Windows — ไฟล์เดียว dist\OpenThai2OCR.exe (ฝังโมเดล)
 build_exe_onedir.bat   :: Windows — โฟลเดอร์ dist\OpenThai2OCR\ (โหลดเร็วกว่า)
 ```
+
+สคริปต์ build จะ: ติดตั้ง dependency → รัน `pytest` → build → เปิด exe ที่ได้มารันจริง 1 ครั้ง
+(`tools\exe_smoke.py`: health → OCR → ปิด) แล้วค่อยแจ้งว่าสำเร็จ · ใช้ `.venv\Scripts\python.exe` ถ้ามี
+· ข้ามเทสต์ด้วย `build_exe.bat --skip-tests`
 
 Linux / macOS:
 

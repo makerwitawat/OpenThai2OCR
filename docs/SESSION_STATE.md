@@ -19,7 +19,7 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 - API: multipart + JSON base64 + `scale`/`settings` + CORS + health — `b9a0437`, `94990d9`
 - ธีมขาว + ฟอนต์ A−/A/A+ (localStorage) + ความละเอียด auto/1×/1.5×/2×
 - icon `app.ico` ฝังใน exe (ยืนยันแล้ว ExtractAssociatedIcon=True)
-- build: `build_exe.bat` (onefile) + `build_exe_onedir.bat` + 2 spec — ทดสอบผ่าน (GET 200, OCR ok, scale=2)
+- build: `build_exe.bat` (onefile) + `build_exe_onedir.bat` + 2 spec — ทดสอบผ่าน (GET 200, OCR ok, scale=2) · ปรับใหม่ session 11: ทั้งคู่รัน pytest + smoke exe (`tools/exe_smoke.py`) อัตโนมัติ
 - เอกสาร: README / docs/USAGE / docs/API / docs/BUILD / CHANGELOG / LICENSE / NOTICE
 - CI: `.github/workflows/ci.yml` (smoke test 3 OS) + `release.yml` (build 3 OS → attach release)
   - CI ผ่านทั้งหมด (Windows/Linux/macOS) ทั้ง 2 รอบ
@@ -423,6 +423,9 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 
 - เอกสารไฟล์ไม่เซ็น: README หัวข้อ "ถ้า Windows / macOS เตือนตอนเปิดครั้งแรก" · BUILD.md หมายเหตุ .pfx ฮาร์ดแวร์ · patch release notes v1.4.0 บน GitHub แล้ว
 - ผลสำรวจใบรับรอง: .pfx ดาวน์โหลดแทบไม่มีแล้ว · Azure ไม่รองรับไทย · ทางเลือกฟรี = SignPath Foundation (Apache-2.0 ผ่าน แต่ต้องตรวจใบอนุญาตโมเดล iApp ใน models/*.onnx ก่อนสมัคร)
+
+- ปรับ .bat ทั้ง 3 ไฟล์ (ASCII อังกฤษ, `.venv`, pytest + smoke exe, `--skip-tests`) + แก้ `OpenThai2OCR_onedir.spec` (เพิ่ม webview hiddenimports + `_DROP`) · build จริงผ่านทั้ง onedir (249 MB ทั้งโฟลเดอร์) และ onefile (105 MB) พร้อม exe_smoke · อัปเดต README/BUILD/BUILD.en/USAGE/USAGE.en/CHANGELOG
+- ข้อควรจำ: แก้ spec หนึ่งไฟล์ต้องแก้อีกไฟล์ให้ตรงกัน (hiddenimports + `_DROP`)
 
 ## Active
 - ไม่มี

@@ -7,7 +7,7 @@
 | Mode | How |
 |---|---|
 | exe (Windows) | Double-click `OpenThai2OCR.exe`; the browser opens automatically |
-| From source | `python app.py` (run `pip install -r requirements.txt` first) |
+| From source | `python app.py`, or `run_web.bat` on Windows (run `pip install -r requirements.txt` first) |
 | Do not open a browser | add `--no-browser` |
 | Change the port | `--port 8080` |
 | Allow LAN access | `--host 0.0.0.0` (also allow the port in your firewall) |
@@ -197,7 +197,10 @@ app.py                  Flask server + API + image handling
 templates/index.html    Web UI (light theme, paste, multi-file, font scale)
 models/                 ONNX models + runtime (line_engine.py, thai_norm.py)
 docs/                   Guides, API, build docs (Thai + English)
-tools/                  Helper scripts (model download, release notes, smoke test)
+tools/                  Helper scripts (model download, release notes, smoke test, exe_smoke)
+run_web.bat             Run from source (Windows)
 build_exe.bat           Windows one-file build
+build_exe_onedir.bat    Windows folder (onedir) build
 OpenThai2OCR.spec       PyInstaller onefile spec
+OpenThai2OCR_onedir.spec  PyInstaller onedir spec
 ```

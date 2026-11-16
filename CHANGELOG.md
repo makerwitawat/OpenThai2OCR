@@ -4,6 +4,8 @@
 
 - **ภาพเต็มจอ (lightbox) แสดงกรอบ** — คลิกกรอบในภาพเต็มจอเพื่อเลือกบรรทัดได้ (ไฮไลต์ซิงก์กับภาพหลัก/ช่องข้อความ) · คลิกที่ว่างเพื่อปิด
 - **เอกสาร** — README เพิ่มหัวข้อ "ถ้า Windows / macOS เตือนตอนเปิดครั้งแรก" (วิธีเปิด + ตรวจ SHA256) · release notes v1.4.0 เพิ่มหมายเหตุไฟล์ยังไม่ได้เซ็น
+- **สคริปต์ .bat ปรับใหม่** — `build_exe.bat` / `build_exe_onedir.bat`: ติดตั้ง dependency → `pytest` → build → (onedir: คัดลอกโมเดล) → smoke test exe ที่ได้ (`tools/exe_smoke.py`) · `--skip-tests` ข้ามเทสต์ · ใช้ `.venv` ถ้ามี · `run_web.bat`: ตรวจ Python/dependency, ส่งอาร์กิวเมนต์ต่อให้ `app.py`, ไม่ฮาร์ดโค้ดพอร์ต · ข้อความเป็น ASCII อังกฤษล้วน (เดิมเป็น cp874 เพี้ยนบน Windows ที่ไม่ใช่ภาษาไทย)
+- **แก้ spec onedir** — เพิ่ม hiddenimports หน้าต่างแอป (WebView2) และตัดไฟล์ที่ไม่ใช้เหมือน onefile (เดิมขาดทั้งสองอย่าง) · build + smoke test ผ่านทั้ง onefile และ onedir
 - **CI** — `release` มีขั้น smoke test รัน binary ที่ build แล้วจริง (`tools/exe_smoke.py`: เปิด `--port` → health → OCR → ปิด) · `publish` รันเฉพาะเมื่อมี tag
 
 ## v1.4.0 — 2026-11-16

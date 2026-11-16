@@ -7,7 +7,7 @@
 | แบบ | วิธี |
 |---|---|
 | exe (Windows) | ดับเบิลคลิก `OpenThai2OCR.exe` แล้วรอเบราว์เซอร์เปิดเอง |
-| รันจากซอร์ส | `python app.py` (ต้อง `pip install -r requirements.txt` ก่อน) |
+| รันจากซอร์ส | `python app.py` หรือ `run_web.bat` บน Windows (ต้อง `pip install -r requirements.txt` ก่อน) |
 | ไม่เปิดเบราว์เซอร์อัตโนมัติ | เพิ่ม `--no-browser` ต่อท้าย |
 | เปลี่ยนพอร์ต | `--port 8080` |
 | ให้เครื่องอื่นใน LAN เรียก | `--host 0.0.0.0` (เปิดไฟร์วอลล์ให้พอร์ตนั้นด้วย) |
@@ -199,7 +199,10 @@ templates/index.html    หน้าเว็บ (ธีมขาว, paste, ห
 models/                 โมเดล ONNX + runtime (line_engine.py, thai_norm.py)
 models/runtime/         ตัวอ่านหน้า (LineOCR) จาก Hugging Face
 docs/                   คู่มือ, API, build
-tools/                  สคริปต์ช่วยเหลือ (ดาวน์โหลดโมเดล, release notes)
+tools/                  สคริปต์ช่วยเหลือ (ดาวน์โหลดโมเดล, release notes, smoke test, exe_smoke)
+run_web.bat             รันจากซอร์ส (Windows)
 build_exe.bat           build exe ไฟล์เดียว (Windows)
+build_exe_onedir.bat    build แบบโฟลเดอร์ (Windows)
 OpenThai2OCR.spec       สเปก PyInstaller แบบ onefile
+OpenThai2OCR_onedir.spec  สเปก PyInstaller แบบ onedir
 ```
