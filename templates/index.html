@@ -112,6 +112,7 @@
     border-radius: .45rem; padding: .35rem .6rem; font-size: .78rem; cursor: pointer;
   }
   .bar button:hover { border-color: var(--accent); color: var(--accent); }
+  .bar button.act { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .bar button:disabled { opacity: .4; cursor: not-allowed; }
   .imgwrap {
     background: repeating-conic-gradient(#f1f5f9 0% 25%, #f8fafc 0% 50%) 50%/1.2rem 1.2rem;
@@ -128,6 +129,29 @@
     white-space: pre-wrap; word-break: break-word;
   }
   .status { padding: .7rem 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
+  .lines { max-height: 20rem; overflow: auto; border-top: 1px solid var(--border); background: var(--panel); }
+  .lines .lnhead {
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    padding: .35rem .9rem; font-size: .76rem; color: var(--muted);
+    background: var(--panel2); position: sticky; top: 0;
+  }
+  .lines .lnhead button {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    border-radius: .4rem; padding: .2rem .5rem; font-size: .74rem; cursor: pointer;
+  }
+  .lines .lnhead button:hover { border-color: var(--accent); color: var(--accent); }
+  .lines .ln {
+    display: flex; align-items: flex-start; gap: .55rem;
+    padding: .3rem .9rem; border-bottom: 1px dashed var(--border); font-size: .86rem;
+  }
+  .lines .ln:last-child { border-bottom: none; }
+  .lines .ln button {
+    flex: none; border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+    border-radius: .35rem; padding: .05rem .4rem; font-size: .7rem; cursor: pointer;
+  }
+  .lines .ln button:hover { border-color: var(--accent); color: var(--accent); }
+  .lines .ln .txt { flex: 1; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+  .lines .ln .cf { flex: none; color: var(--muted); font-size: .7rem; padding-top: .1rem; }
   .status.err { color: var(--err); }
   .meta { color: var(--muted); font-size: .74rem; font-weight: 400; }
   .hidden { display: none !important; }
@@ -211,14 +235,17 @@
         <h2>
           <span data-i18n="textTitle">ข้อความที่อ่านได้</span>
           <span class="bar">
+            <button id="linesBtn" data-i18n="lines">รายบรรทัด</button>
             <button id="copy" data-i18n="copy">คัดลอก</button>
             <button id="saveTxt" data-i18n="downloadTxt">.txt</button>
+            <button id="saveDocx" data-i18n="exportDocx" disabled>.docx</button>
             <button id="savePdf" data-i18n="exportPdf" disabled>.pdf</button>
             <button id="saveCsv" data-i18n="exportCsv" disabled>.csv</button>
             <button id="saveJson" data-i18n="exportJson" disabled>.json</button>
           </span>
         </h2>
         <textarea class="textout" id="out" spellcheck="false"></textarea>
+        <div class="lines hidden" id="lines"></div>
         <div class="status" id="status" data-i18n="statusWaiting">รอไฟล์</div>
       </div>
     </div>
@@ -240,6 +267,8 @@
       imageTitle: "ภาพผลลัพธ์", textTitle: "ข้อความที่อ่านได้",
       noImage: "ยังไม่มีภาพ",
       copy: "คัดลอก", downloadTxt: ".txt", exportPdf: ".pdf", exportCsv: ".csv", exportJson: ".json",
+      exportDocx: ".docx", lines: "รายบรรทัด",
+      linesHead: "{n} บรรทัด · กดเพื่อคัดลอกทีละบรรทัด", copyAllLines: "คัดลอกทุกบรรทัด",
       statusWaiting: "รอไฟล์", statusProcessing: "กำลังประมวลผล…", statusDone: "สำเร็จ",
       statusError: "ข้อผิดพลาด", statusCancelled: "ยกเลิกแล้ว",
       statusCopied: "คัดลอกแล้ว", statusNeedFile: "กรุณาเลือกไฟล์ก่อน",
@@ -265,6 +294,8 @@
       imageTitle: "Result image", textTitle: "Recognized text",
       noImage: "No image yet",
       copy: "Copy", downloadTxt: ".txt", exportPdf: ".pdf", exportCsv: ".csv", exportJson: ".json",
+      exportDocx: ".docx", lines: "Lines",
+      linesHead: "{n} line(s) · click to copy a line", copyAllLines: "Copy all lines",
       statusWaiting: "Waiting for a file", statusProcessing: "Processing…", statusDone: "Done",
       statusError: "Error", statusCancelled: "Cancelled",
       statusCopied: "Copied", statusNeedFile: "Please choose a file first",
@@ -292,8 +323,14 @@
   };
   function applyLang() {
     document.documentElement.lang = lang;
-    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      if (el.id === "status") return;
+      if (el.id === "placeholder" && placeholderLabel) return;
+      el.textContent = t(el.dataset.i18n);
+    });
     document.getElementById("langBtn").textContent = lang === "th" ? "EN" : "ไทย";
+    linesBtn.classList.toggle("act", showLines);
+    renderLines();
     applyStatusIfIdle();
   }
   function setStatus(text, isErr) {
@@ -322,9 +359,12 @@
   const lightboxImg = document.getElementById("lightboxImg");
   const copyBtn = document.getElementById("copy");
   const saveTxtBtn = document.getElementById("saveTxt");
+  const saveDocxBtn = document.getElementById("saveDocx");
   const savePdfBtn = document.getElementById("savePdf");
   const saveCsvBtn = document.getElementById("saveCsv");
   const saveJsonBtn = document.getElementById("saveJson");
+  const linesBtn = document.getElementById("linesBtn");
+  const linesBox = document.getElementById("lines");
   const authbar = document.getElementById("authbar");
 
   let pages = [];               // {file, page, text, lines, image, n_lines, result_id}
@@ -334,6 +374,8 @@
   let pendingFiles = [];
   let busy = false;
   let activeJob = null;
+  let showLines = false;
+  let placeholderLabel = null;
   status.dataset.idle = "1";
 
   /* ---------- i18n & font ---------- */
@@ -420,10 +462,12 @@
       imgbox.classList.add("hidden");
       pagesBox.classList.add("hidden");
       placeholder.classList.remove("hidden");
+      renderLines();
     }
     pendingFiles.push(...files);
     filemeta.textContent = files.length > 1 ? `${files.length} ${t("filesWord")}` : files[0].name;
-    placeholder.textContent = files.length > 1 ? `${files.length} ${t("filesWord")}` : files[0].name;
+    placeholderLabel = files.length > 1 ? `${files.length} ${t("filesWord")}` : files[0].name;
+    placeholder.textContent = placeholderLabel;
     pump();
   }
 
@@ -555,25 +599,63 @@
       placeholder.classList.add("hidden");
     }
     out.value = mergedText;
+    renderLines();
     updateExportButtons();
   }
 
-  function updateExportButtons() {
-    const ready = pages.length > 0 && !!pages[currentPage];
-    [savePdfBtn, saveCsvBtn, saveJsonBtn].forEach(b => { b.disabled = !ready; });
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  /* ---------- clipboard / download ---------- */
-  copyBtn.addEventListener("click", async () => {
+  async function copyText(text) {
     try {
-      await navigator.clipboard.writeText(out.value);
+      await navigator.clipboard.writeText(text);
       setStatus(t("statusCopied"));
     } catch {
       out.select();
       document.execCommand("copy");
       setStatus(t("statusCopied"));
     }
+  }
+
+  function renderLines() {
+    const p = pages[currentPage];
+    const list = (p && p.lines) ? p.lines : [];
+    if (!showLines || !list.length) {
+      linesBox.classList.add("hidden");
+      linesBox.innerHTML = "";
+      return;
+    }
+    linesBox.classList.remove("hidden");
+    linesBox.innerHTML =
+      `<div class="lnhead"><span>${t("linesHead", { n: list.length })}</span>` +
+      `<button id="copyAllLines">${t("copyAllLines")}</button></div>` +
+      list.map((ln, i) =>
+        `<div class="ln"><button data-i="${i}">${t("copy")}</button>` +
+        `<span class="txt">${escapeHtml(ln.text)}</span>` +
+        `<span class="cf">${Math.round((ln.confidence || 0) * 100)}%</span></div>`
+      ).join("");
+    linesBox.querySelectorAll("[data-i]").forEach(b =>
+      b.addEventListener("click", () => copyText(list[+b.dataset.i].text)));
+    const all = document.getElementById("copyAllLines");
+    if (all) all.addEventListener("click", () => copyText(list.map(l => l.text).join("\n")));
+  }
+
+  linesBtn.addEventListener("click", () => {
+    showLines = !showLines;
+    linesBtn.classList.toggle("act", showLines);
+    if (!pages.length) setStatus(t("statusNeedFile"));
+    renderLines();
   });
+
+  function updateExportButtons() {
+    const ready = pages.length > 0 && !!pages[currentPage];
+    [saveDocxBtn, savePdfBtn, saveCsvBtn, saveJsonBtn].forEach(b => { b.disabled = !ready; });
+  }
+
+  /* ---------- clipboard / download ---------- */
+  copyBtn.addEventListener("click", () => copyText(out.value));
 
   function download(blob, name) {
     const a = document.createElement("a");
@@ -602,6 +684,7 @@
     const stem = p.file.replace(/\.[^.]+$/, "") || "ocr";
     download(blob, `${stem}-ocr.${fmt}`);
   }
+  saveDocxBtn.onclick = () => exportAs("docx");
   savePdfBtn.onclick = () => exportAs("pdf");
   saveCsvBtn.onclick = () => exportAs("csv");
   saveJsonBtn.onclick = () => exportAs("json");
@@ -621,6 +704,7 @@
   document.getElementById("scale").addEventListener("change", () => {
     if (pickedFiles.length && !busy) {
       pages = []; mergedText = ""; currentPage = 0; out.value = "";
+      renderLines();
       pendingFiles.push(...pickedFiles);
       pump();
     }

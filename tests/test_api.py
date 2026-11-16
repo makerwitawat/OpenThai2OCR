@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """API tests for the OpenThai2.0 OCR web app (pytest, no network needed)."""
 import base64
+import io
+import os
 import sys
+import time
+import zipfile
 from pathlib import Path
 
 import cv2
@@ -87,3 +91,33 @@ def test_base64_payload(client, sample_png):
     data = client.post("/api/ocr", json=body).get_json()
     assert data["ok"] is True
     assert "image" not in data["pages"][0]
+
+
+def test_docx_export(client, sample_png):
+    res = client.post("/api/ocr", data={"file": (io.BytesIO(sample_png), "sample.png")},
+                      content_type="multipart/form-data")
+    rid = res.get_json()["result_id"]
+    docx = client.get(f"/api/result/{rid}/export?format=docx")
+    assert docx.status_code == 200
+    assert docx.data[:2] == b"PK"
+    with zipfile.ZipFile(io.BytesIO(docx.data)) as z:
+        assert {"[Content_Types].xml", "word/document.xml", "word/styles.xml"} <= set(z.namelist())
+        assert "w:body" in z.read("word/document.xml").decode("utf-8")
+
+
+def test_watch_folder(tmp_path, monkeypatch, sample_png):
+    inbox, out = tmp_path / "in", tmp_path / "out"
+    inbox.mkdir()
+    monkeypatch.setattr(web, "WATCH_DIR", str(inbox))
+    monkeypatch.setattr(web, "WATCH_OUT", str(out))
+    monkeypatch.setattr(web, "WATCH_INTERVAL", 1.0)
+    src = inbox / "doc.png"
+    src.write_bytes(sample_png)
+    old = time.time() - 60
+    os.utime(src, (old, old))
+
+    assert web._watch_scan() == ["doc.png"]
+    assert (out / "doc-ocr.txt").read_text(encoding="utf-8").strip()
+    assert (out / "doc-ocr.docx").read_bytes()[:2] == b"PK"
+    assert (out / "doc-ocr.json").exists()
+    assert web._watch_scan() == []  # unchanged file is not processed twice

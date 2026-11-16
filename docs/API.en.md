@@ -12,6 +12,7 @@ CORS is open for every origin.
 | exe | double-click `OpenThai2OCR.exe` (or `OpenThai2OCR.exe --port 5000`) |
 | python | `python app.py` |
 | LAN access | add `--host 0.0.0.0`, e.g. `python app.py --host 0.0.0.0 --port 5000` |
+| Watch a folder | `python app.py --watch "D:\inbox"` (see the watch folder section below) |
 
 It listens on `127.0.0.1:5000` by default (this machine only).
 
@@ -23,10 +24,11 @@ It listens on `127.0.0.1:5000` by default (this machine only).
 {
   "ok": true,
   "app": "openthai2ocr",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "model_dir": "D:\\...\\models",
   "model_ready": true,
   "auth_required": false,
+  "watch": {"dir": null, "out": null, "interval": null},
   "limits": {"max_upload_mb": 100, "max_pages": 50}
 }
 ```
@@ -131,7 +133,7 @@ When `done`, the response includes `pages`, `text`, and `result_id`.
 
 Stops between pages.
 
-### `GET /api/result/<result_id>/export?format=pdf|csv|json|txt`
+### `GET /api/result/<result_id>/export?format=pdf|csv|json|txt|docx`
 
 Downloads the result (the last 5 results are kept).
 
@@ -139,6 +141,7 @@ Downloads the result (the last 5 results are kept).
 - `csv` = lines + confidence + box coordinates (UTF-8 BOM, opens in Excel)
 - `json` = full result (no images)
 - `txt` = plain text
+- `docx` = Word document, one paragraph per line, Leelawadee UI font (editable)
 
 ```bash
 curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
@@ -147,6 +150,25 @@ curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
 ### `POST /api/shutdown`
 
 Stops the app, localhost only (used by the web UI "Quit" button).
+
+### Watch folder
+
+Start with `--watch <dir>` — new or changed files are OCR'd every
+`--watch-interval` seconds (default 5).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--watch DIR` | (off) | folder to watch |
+| `--watch-out DIR` | `<DIR>/ocr-results` | where results are written |
+| `--watch-interval SEC` | `5` | poll interval (minimum 1) |
+
+Each input produces `<stem>-ocr.txt`, `<stem>-ocr.docx`, `<stem>-ocr.json`.
+Sources are never moved or deleted, and a file is re-read only when its size or
+mtime changes. Watch status is exposed by `/api/health` (`watch`).
+
+```bash
+python app.py --watch "D:\inbox" --watch-out "D:\out" --watch-interval 3 --no-browser
+```
 
 ### Authentication (when `--api-key` is set)
 

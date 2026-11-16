@@ -47,11 +47,34 @@ python tools/release-notes-patch.py v1.0.0 notes.md --repo <owner>/<repo>
 gh release upload v1.0.0 dist/OpenThai2OCR-linux-x64 --clobber
 ```
 
+## เซ็นชื่อ exe (code signing)
+
+ถ้ามีใบรับรอง code signing จะลดคำเตือน "Windows protected your PC" ได้
+สคริปต์ `tools/sign_exe.ps1` หา `signtool.exe` ให้เอง (จาก PATH หรือ Windows Kits)
+
+```powershell
+# 1) ใบรับรองแบบไฟล์ .pfx
+$env:SIGN_PFX = "C:\certs\codesign.pfx"; $env:SIGN_PFX_PASSWORD = "รหัส"
+powershell -ExecutionPolicy Bypass -File tools\sign_exe.ps1 -Path dist\OpenThai2OCR.exe
+
+# 2) ใบรับรองที่ติดตั้งใน Windows store (ระบุ thumbprint)
+$env:SIGN_THUMBPRINT = "A1B2C3..."
+powershell -ExecutionPolicy Bypass -File tools\sign_exe.ps1
+```
+
+- ต้องเซ็น **ก่อน** เปลี่ยนชื่อไฟล์/อัปโหลด (CI เซ็นให้ก่อนขั้น Rename)
+- ตัวเลือกเสริม: `-TimestampUrl` (ค่าเริ่มต้น `http://timestamp.digicert.com`)
+- สคริปต์จะ `signtool verify /pa` ให้ด้วย — ถ้าไม่ผ่านจะหยุดทันที
+
+ใน CI ใส่ secret `WINDOWS_PFX_BASE64` (base64 ของ .pfx) +
+`WINDOWS_PFX_PASSWORD` แล้ว workflow `release` จะเซ็น exe บน Windows ให้อัตโนมัติ
+(ถ้าไม่ตั้ง secret ขั้นนี้จะถูกข้าม ไม่ทำให้ build ล้ม)
+
 ## ทดสอบก่อน build
 
 ```bash
 python -m pip install -r requirements-dev.txt
-python -m pytest -q          # ทดสอบ API 7 เคส
+python -m pytest -q          # ทดสอบ API 9 เคส
 python tools/smoke_test.py   # ทดสอบอ่านภาพจริง
 ```
 

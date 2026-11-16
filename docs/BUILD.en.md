@@ -51,11 +51,34 @@ gh release upload v1.0.0 dist/OpenThai2OCR-linux-x64 --clobber
 > ASCII notes, then run `tools/release-notes-patch.py` (UTF-8 via GitHub API) and verify the
 > `.checked` file with an editor.
 
+## Code signing
+
+A code-signing certificate reduces the "Windows protected your PC" warning.
+`tools/sign_exe.ps1` finds `signtool.exe` automatically (PATH or Windows Kits).
+
+```powershell
+# 1) .pfx file
+$env:SIGN_PFX = "C:\certs\codesign.pfx"; $env:SIGN_PFX_PASSWORD = "secret"
+powershell -ExecutionPolicy Bypass -File tools\sign_exe.ps1 -Path dist\OpenThai2OCR.exe
+
+# 2) certificate installed in the Windows store (thumbprint)
+$env:SIGN_THUMBPRINT = "A1B2C3..."
+powershell -ExecutionPolicy Bypass -File tools\sign_exe.ps1
+```
+
+- Sign **before** renaming/uploading (CI signs before the Rename step)
+- Optional `-TimestampUrl` (default `http://timestamp.digicert.com`)
+- The script runs `signtool verify /pa` and stops if verification fails
+
+For CI set the secrets `WINDOWS_PFX_BASE64` (base64 of the .pfx) and
+`WINDOWS_PFX_PASSWORD`; the `release` workflow then signs the Windows exe
+automatically (the step is skipped when the secret is absent).
+
 ## Test before building
 
 ```bash
 python -m pip install -r requirements-dev.txt
-python -m pytest -q          # 7 API tests
+python -m pytest -q          # 9 API tests
 python tools/smoke_test.py   # real OCR smoke test
 ```
 

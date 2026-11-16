@@ -12,6 +12,7 @@
 | exe | ดับเบิลคลิก `OpenThai2OCR.exe` (หรือ `OpenThai2OCR.exe --port 5000`) |
 | python | `python app.py` |
 | ให้เครื่องอื่นใน LAN เรียกได้ | ตั้ง `--host 0.0.0.0` เช่น `python app.py --host 0.0.0.0 --port 5000` |
+| เฝ้าโฟลเดอร์ (watch) | `python app.py --watch "D:\inbox"` (ดูหัวข้อ watch folder ด้านล่าง) |
 
 ค่าเริ่มต้นฟังที่ `127.0.0.1:5000` (เครื่องตัวเองเท่านั้น)
 
@@ -23,10 +24,11 @@
 {
   "ok": true,
   "app": "openthai2ocr",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "model_dir": "D:\\...\\models",
   "model_ready": true,
   "auth_required": false,
+  "watch": {"dir": null, "out": null, "interval": null},
   "limits": {"max_upload_mb": 100, "max_pages": 50}
 }
 ```
@@ -131,7 +133,7 @@ multipart ใส่ `images=0`, `scale=2`, `settings={"rec":{...}}` เป็น
 
 ยกเลิกระหว่างอ่านได้ (หยุดที่ขอบเขตหน้าถัดไป)
 
-### `GET /api/result/<result_id>/export?format=pdf|csv|json|txt`
+### `GET /api/result/<result_id>/export?format=pdf|csv|json|txt|docx`
 
 ดาวน์โหลดผลลัพธ์ (เก็บผลล่าสุด 5 รายการ)
 
@@ -139,6 +141,7 @@ multipart ใส่ `images=0`, `scale=2`, `settings={"rec":{...}}` เป็น
 - `csv` = บรรทัด + confidence + พิกัดกรอบ (UTF-8 BOM เปิด Excel ได้)
 - `json` = ผลเต็ม (ไม่มีภาพประกอบ)
 - `txt` = ข้อความล้วน
+- `docx` = Word — บรรทัดละย่อหน้า ฟอนต์ Leelawadee UI (แก้ไขต่อได้ทันที)
 
 ```bash
 curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
@@ -147,6 +150,25 @@ curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
 ### `POST /api/shutdown`
 
 ปิดโปรแกรมจากเครื่องตัวเองเท่านั้น (ใช้โดยปุ่ม "ปิดโปรแกรม" ในหน้าเว็บ)
+
+### watch folder (เฝ้าโฟลเดอร์)
+
+เปิดด้วย `--watch <โฟลเดอร์>` — โปรแกรมจะตรวจไฟล์ใหม่ (หรือไฟล์ที่ถูกแก้) ทุก ๆ
+`--watch-interval` วินาที (ค่าเริ่มต้น 5) แล้วอ่านให้อัตโนมัติ
+
+| ธง | ค่าเริ่มต้น | ความหมาย |
+|---|---|---|
+| `--watch DIR` | (ปิด) | โฟลเดอร์ที่เฝ้า |
+| `--watch-out DIR` | `<DIR>/ocr-results` | โฟลเดอร์เก็บผลลัพธ์ |
+| `--watch-interval SEC` | `5` | ตรวจทุกกี่วินาที (ต่ำสุด 1) |
+
+ผลที่ได้ต่อไฟล์: `<ชื่อไฟล์>-ocr.txt`, `<ชื่อไฟล์>-ocr.docx`, `<ชื่อไฟล์>-ocr.json`
+ไฟล์ต้นฉบับไม่ถูกย้าย/ลบ และไฟล์เดิมจะถูกอ่านซ้ำก็ต่อเมื่อขนาด/เวลาแก้เปลี่ยน
+สถานะ watch ดูได้จาก `/api/health` (`watch`)
+
+```bash
+python app.py --watch "D:\inbox" --watch-out "D:\out" --watch-interval 3 --no-browser
+```
 
 ### Authentication (เมื่อเปิด `--api-key`)
 

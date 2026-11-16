@@ -16,7 +16,9 @@ import traceback
 import urllib.error
 import urllib.request
 import webbrowser
+import zipfile
 from collections import OrderedDict
+from xml.sax.saxutils import escape as xml_escape
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -25,7 +27,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_file
 
 APP_NAME = "openthai2ocr"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 BUNDLE = Path(getattr(sys, "_MEIPASS", BASE)) if getattr(sys, "frozen", False) else BASE
@@ -53,6 +55,9 @@ RESULT_KEEP = 5
 LOG_DIR = BASE / "logs"
 PORT = 5000
 API_KEY = ""
+WATCH_DIR = ""
+WATCH_OUT = ""
+WATCH_INTERVAL = 5.0
 log = logging.getLogger(APP_NAME)
 
 
@@ -358,6 +363,90 @@ def _prune_jobs():
             _jobs.pop(k, None)
 
 
+# ---------------------------------------------------------------- watch folder
+_watch_state: dict[str, str] = {}
+_watch_lock = threading.Lock()
+_watch_stop = threading.Event()
+
+
+def _watch_key(path: Path) -> str:
+    st = path.stat()
+    return f"{st.st_size}:{int(st.st_mtime)}"
+
+
+def _watch_seen(path: Path, key: str) -> bool:
+    with _watch_lock:
+        return _watch_state.get(str(path)) == key
+
+
+def _watch_mark(path: Path, key: str) -> None:
+    with _watch_lock:
+        _watch_state[str(path)] = key
+
+
+def _watch_scan() -> list[str]:
+    """OCR files that are new (or changed) in WATCH_DIR and write results to WATCH_OUT."""
+    if not WATCH_DIR:
+        return []
+    folder = Path(WATCH_DIR)
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        log.exception("watch: cannot use %s", folder)
+        return []
+    out_dir = Path(WATCH_OUT) if WATCH_OUT else folder / "ocr-results"
+    min_age = max(0.5, WATCH_INTERVAL / 2)
+    now = time.time()
+    present: list[str] = []
+    processed: list[str] = []
+    for path in sorted(folder.iterdir()):
+        if not path.is_file() or path.suffix.lower() not in ALLOWED_EXT:
+            continue
+        if path.name.startswith("~$") or path.name.startswith("."):
+            continue
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        present.append(str(path))
+        key = f"{st.st_size}:{int(st.st_mtime)}"
+        if now - st.st_mtime < min_age or _watch_seen(path, key):
+            continue  # still being written, or already handled
+        try:
+            pages, text_all = _analyze(path.suffix.lower(), path.read_bytes(), {"want_images": False})
+            entry = {"ext": path.suffix.lower(), "source": b"", "name": path.name,
+                     "pages": pages, "text": text_all}
+            out_dir.mkdir(parents=True, exist_ok=True)
+            stem = path.stem or "ocr"
+            (out_dir / f"{stem}-ocr.txt").write_text(text_all, encoding="utf-8")
+            (out_dir / f"{stem}-ocr.docx").write_bytes(_export_docx(entry))
+            (out_dir / f"{stem}-ocr.json").write_bytes(_export_json(entry))
+            processed.append(path.name)
+            log.info("watch: %s -> %d page(s) -> %s", path.name, len(pages), out_dir)
+        except Exception:
+            log.exception("watch: %s failed", path.name)
+        _watch_mark(path, key)  # a failed file is retried only after it changes
+    with _watch_lock:
+        alive = set(present)
+        for gone in [k for k in _watch_state if k not in alive]:
+            _watch_state.pop(gone, None)
+    return processed
+
+
+def _watch_loop():
+    log.info("watch folder: %s (interval %.1fs, out=%s)", WATCH_DIR, WATCH_INTERVAL,
+             WATCH_OUT or "ocr-results/")
+    while not _watch_stop.wait(max(0.5, WATCH_INTERVAL)):
+        try:
+            _watch_scan()
+        except Exception:
+            log.exception("watch scan failed")
+
+
+def _start_watch():
+    threading.Thread(target=_watch_loop, name="watch-folder", daemon=True).start()
+
+
 # ---------------------------------------------------------------- auth / cors
 def _is_local() -> bool:
     return request.remote_addr in ("127.0.0.1", "::1")
@@ -417,6 +506,8 @@ def api_health():
                     "model_dir": str(MODEL_DIR),
                     "model_ready": all((MODEL_DIR / n).exists() for n in ("det.onnx", "rec.onnx", "rec_dict.txt", "config.json")),
                     "auth_required": bool(API_KEY),
+                    "watch": {"dir": WATCH_DIR or None, "out": WATCH_OUT or None,
+                              "interval": WATCH_INTERVAL if WATCH_DIR else None},
                     "limits": {"max_upload_mb": MAX_CONTENT_MB, "max_pages": MAX_PAGES}})
 
 
@@ -632,6 +723,78 @@ def _export_txt(entry: dict) -> bytes:
     return entry["text"].encode("utf-8")
 
 
+DOCX_FONT = "Leelawadee UI"
+
+
+def _docx_para(text: str, size: int = 24, bold: bool = False) -> str:
+    rpr = ('<w:rPr><w:rFonts w:ascii="{0}" w:hAnsi="{0}" w:cs="{0}" w:eastAsia="{0}"/>'
+           '<w:sz w:val="{1}"/><w:szCs w:val="{1}"/>{2}</w:rPr>').format(
+        DOCX_FONT, size, "<w:b/>" if bold else "")
+    run = f'<w:r>{rpr}<w:t xml:space="preserve">{xml_escape(text)}</w:t></w:r>' if text else ""
+    return f"<w:p><w:pPr>{rpr}</w:pPr>{run}</w:p>"
+
+
+_DOCX_RELS = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+    "</Relationships>"
+)
+_DOCX_CONTENT_TYPES = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    '<Default Extension="xml" ContentType="application/xml"/>'
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+    "</Types>"
+)
+_DOCX_DOC_RELS = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+    "</Relationships>"
+)
+_DOCX_STYLES = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    "<w:docDefaults><w:rPrDefault><w:rPr>"
+    f'<w:rFonts w:ascii="{DOCX_FONT}" w:hAnsi="{DOCX_FONT}" w:cs="{DOCX_FONT}" w:eastAsia="{DOCX_FONT}"/>'
+    '<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults>'
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'
+    "</w:styles>"
+)
+
+
+def _export_docx(entry: dict) -> bytes:
+    """Minimal Word document (zip + OOXML) — no python-docx dependency."""
+    body: list[str] = []
+    pages = entry["pages"]
+    for p in pages:
+        if len(pages) > 1:
+            body.append(_docx_para(f"หน้า {p.get('page', 1)}", size=28, bold=True))
+        lines = p.get("lines") or []
+        if lines:
+            body.extend(_docx_para(ln["text"]) for ln in lines if ln.get("text"))
+        elif p.get("text"):
+            body.extend(_docx_para(t) for t in p["text"].splitlines() if t.strip())
+    if not body:
+        body.append(_docx_para(""))
+    body.append('<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>'
+                '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>')
+    doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+           "<w:body>" + "".join(body) + "</w:body></w:document>")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", _DOCX_CONTENT_TYPES)
+        z.writestr("_rels/.rels", _DOCX_RELS)
+        z.writestr("word/document.xml", doc)
+        z.writestr("word/styles.xml", _DOCX_STYLES)
+        z.writestr("word/_rels/document.xml.rels", _DOCX_DOC_RELS)
+    return buf.getvalue()
+
+
 @app.get("/api/result/<result_id>/export")
 def api_export(result_id):
     entry = _get_result(result_id)
@@ -652,10 +815,14 @@ def api_export(result_id):
         if fmt == "txt":
             return send_file(io.BytesIO(_export_txt(entry)), mimetype="text/plain; charset=utf-8",
                              as_attachment=True, download_name=f"{stem}-ocr.txt")
+        if fmt == "docx":
+            return send_file(io.BytesIO(_export_docx(entry)),
+                             mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                             as_attachment=True, download_name=f"{stem}-ocr.docx")
     except Exception:
         log.exception("export %s failed", fmt)
         return jsonify({"ok": False, "error": "สร้างไฟล์ส่งออกไม่สำเร็จ"}), 500
-    return jsonify({"ok": False, "error": "format ไม่รองรับ (pdf|csv|json|txt)"}), 400
+    return jsonify({"ok": False, "error": "format ไม่รองรับ (pdf|csv|json|txt|docx)"}), 400
 
 
 # ---------------------------------------------------------------- bootstrap
@@ -698,7 +865,7 @@ def _port_free(host: str, port: int) -> bool:
 
 
 def main():
-    global MODEL_DIR, PORT, API_KEY
+    global MODEL_DIR, PORT, API_KEY, WATCH_DIR, WATCH_OUT, WATCH_INTERVAL
     host = "127.0.0.1"
     ports = [PORT]
     no_browser = False
@@ -716,6 +883,15 @@ def main():
             API_KEY = args[i + 1]
         elif a == "--log-level" and i + 1 < len(args):
             log_level = args[i + 1]
+        elif a == "--watch" and i + 1 < len(args):
+            WATCH_DIR = args[i + 1]
+        elif a == "--watch-out" and i + 1 < len(args):
+            WATCH_OUT = args[i + 1]
+        elif a == "--watch-interval" and i + 1 < len(args):
+            try:
+                WATCH_INTERVAL = max(1.0, float(args[i + 1]))
+            except ValueError:
+                pass
         elif a == "--no-browser":
             no_browser = True
 
@@ -748,6 +924,9 @@ def main():
 
     if not no_browser:
         threading.Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}/")).start()
+
+    if WATCH_DIR:
+        _start_watch()
 
     log.info("serving on %s:%d", host, PORT)
     from waitress import serve

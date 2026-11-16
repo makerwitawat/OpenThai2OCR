@@ -15,7 +15,9 @@ with a Thai/English web UI, clipboard paste, a JSON API for other programs, and 
 - **Boxes on the image** — each line is outlined with its confidence score
 - **Font size follows the screen** — `A− A A+` buttons, remembered in the browser
 - **Progress + cancel** — know which page a long PDF is on and stop mid-way
-- **Exports** — searchable PDF, CSV (Excel-friendly), JSON, TXT
+- **Exports** — searchable PDF, Word (.docx), CSV (Excel-friendly), JSON, TXT
+- **Line-level copy** — expand every line with its confidence and copy just the one you need
+- **Watch folder** — `--watch` auto-OCRs new files into .txt/.docx/.json
 - **Ready-to-use API** — multipart / JSON base64 / background jobs, CORS enabled, 8 language examples
 - **Basic safety** — 100 MB / 50 page limits, optional API key for LAN mode, log file
 - **Thai/English UI toggle** — EN/ไทย button (remembered) plus an in-app Quit button
@@ -37,6 +39,7 @@ python -m pip install -r requirements.txt
 python app.py                # opens http://127.0.0.1:5000
 python app.py --no-browser   # do not open a browser
 python app.py --host 0.0.0.0 --port 8080   # allow other machines on the LAN
+python app.py --watch "D:\inbox"           # OCR new files dropped into a folder
 ```
 
 ## Build an executable

@@ -27,16 +27,33 @@ Four ways:
 
 Accepted: PNG, JPG/JPEG, BMP, TIF/TIFF, WEBP, PDF (every page).
 
+### Watch folder
+
+Instead of dropping files by hand, let the app watch a folder:
+
+```bash
+python app.py --watch "D:\inbox"                          # results -> D:\inbox\ocr-results
+python app.py --watch "D:\inbox" --watch-out "D:\out"     # custom output folder
+python app.py --watch "D:\inbox" --watch-interval 3       # poll every 3s (default 5)
+```
+
+- Each input yields `<stem>-ocr.txt`, `<stem>-ocr.docx`, `<stem>-ocr.json`
+- Sources are **never moved or deleted**; a file is re-read only when its size/mtime changes
+- Files still being copied are skipped until they stop changing
+
 ## 3. Read the result
 
 - OCR starts automatically as soon as a file arrives
 - Left = the image with line boxes and confidence scores (top-left of each box)
 - Right = the text in reading order (2–3 column pages supported)
 - Multiple files/pages → tabs below the image
-- Buttons: **Copy** / **.txt** / **.pdf** / **.csv** / **.json**
+- Buttons: **Copy** / **.txt** / **.docx** / **.pdf** / **.csv** / **.json**
   - `.pdf` = **searchable PDF** (an invisible text layer over the image)
+  - `.docx` = Word document, one paragraph per line, editable
   - `.csv` = lines with confidence and box coordinates (opens in Excel)
   - `.json` = full result for downstream use
+- **Lines** button — expands every line of the current page with its confidence;
+  copy a single line, or **Copy all lines** for the whole page
 - Multi-page PDFs: a progress bar ("Page x/y") and a **Cancel** button while reading
 
 ## 4. Accuracy tuning
