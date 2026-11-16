@@ -31,6 +31,13 @@ jobs:
         run: python tools/smoke_test.py
       - name: Build onefile
         run: pyinstaller OpenThai2OCR.spec --noconfirm --clean
+      - name: Smoke test built binary
+        shell: bash
+        run: |
+          set -e
+          bin=dist/OpenThai2OCR
+          [ -f "$bin.exe" ] && bin="$bin.exe"
+          python tools/exe_smoke.py "$bin" --timeout 180
       - name: Sign Windows binary
         if: runner.os == 'Windows' && env.PFX_BASE64 != ''
         shell: pwsh
@@ -67,6 +74,7 @@ jobs:
 
   publish:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
