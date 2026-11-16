@@ -258,3 +258,42 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 ## commit ล่าสุด
 - `ee81d18` (feat(v1.3.0): API guide, playground and status pages; remembered no-browser start)
 - version: 1.3.0 — ยังไม่ tag/release
+
+## Session 7 (v1.3.0 — ปล่อย release) — 2026-11-16
+
+## Objective
+build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่อจาก Session 6)
+
+## Completed
+- spec: ทำ hiddenimports ของ webview/clr เป็น Windows-only (`sys.platform == "win32"`)
+  กัน build Linux/macOS พัง (commit `d421d1c`)
+- **เจอบั๊ก CI**: `requirements.txt` ไม่มีขึ้นบรรทัดใหม่ท้ายไฟล์ → append ต่อกันเป็น
+  `onnxruntime>=1.17pywebview>=5.0` → pip ของ CI พังทุก OS → แก้ + retag (commit `4aa1696`)
+- ลบ tag เดิมที่ชี้ commit เสีย → tag `v1.3.0` ใหม่บน `4aa1696` → CI `release` + `ci` ผ่าน
+- GitHub Release `v1.3.0` (id 446884747) มี 3 asset · PATCH notes ผ่าน `release-notes-patch.py`
+  ภาษาไทยปกติ (ตรวจ `.checked`)
+- ทดสอบ exe ที่ดาวน์โหลดจาก release จริง: `--window` ขึ้นหน้าต่าง "OpenThai2.0 OCR",
+  `/api/health` ตอบ, ปิดผ่านปุ่มในหน้าเว็บได้ (log: shutdown requested via UI)
+- เอา asset Windows จาก release มาแทน `dist\OpenThai2OCR.exe` — SHA256 ตรงกับที่ปล่อย
+  (`aa60fd4c…0f5d`, 151 MB รวม WebView2/pythonnet)
+
+## ข้อควรระวังที่เจอ
+- `Add-Content` ต่อท้ายไฟล์ที่ไม่มี newline ปิดท้าย → ข้อความติดกัน (เจอใน requirements.txt)
+- `gh release view --jq '...'` ใน PowerShell 5.1 มีปัญหาระบุ argument → ใช้ `--template` ไม่ได้
+  ต้อง `--json ... -q` แบบไม่มี double quote ใน jq
+- asset บน GitHub เรียงตามชื่อ (linux แรก) → digest ของ `assets[0]` ไม่ใช่ Windows (เขียนตารางเอง)
+
+## Active
+- ไม่มี — v1.3.0 ปล่อยแล้ว
+
+## Blocked
+- code signing ยังไม่มีใบรับรอง (โครงพร้อม) · Linux/macOS โหมดหน้าต่างต้องมี GTK/WebKit
+  (ถ้าไม่มีจะ fallback เปิดเบราว์เซอร์)
+
+## Next Move
+- เก็บฟีดแบ็กจากผู้ใช้หน้า `/docs` `/playground` `/status` / โหมดหน้าต่าง
+- ถ้าจะเซ็นจริง: ใส่ secret `WINDOWS_PFX_BASE64` + `WINDOWS_PFX_PASSWORD` ก่อน push tag ถัดไป
+
+## commit ล่าสุด
+- `4aa1696` (fix: newline before pywebview in requirements.txt) — tag `v1.3.0` อยู่ที่ commit นี้
+- version: 1.3.0 — release แล้ว (release id 446884747)
