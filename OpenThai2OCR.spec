@@ -36,7 +36,9 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["openvino", "IPython", "matplotlib", "pandas", "scipy", "torch", "torchvision", "torchaudio", "llvmlite", "numba", "sklearn", "sympy", "transformers", "tensorflow", "jax", "paddle", "paddleocr", "notebook", "ipykernel"],
+    excludes=["openvino", "IPython", "matplotlib", "pandas", "scipy", "torch", "torchvision", "torchaudio", "llvmlite", "numba", "sklearn", "sympy", "transformers", "tensorflow", "jax", "paddle", "paddleocr", "notebook", "ipykernel",
+              # ไม่ใช้ในแอป: cryptography ถูกดึงมาจาก webview/werkzeug (ทำใบรับรอง HTTPS), Pillow/Cython/fontTools หลุดมาจาก Python ของเครื่อง
+              "cryptography", "PIL", "Cython", "fontTools", "pymupdf4llm", "pymupdf_layout"],
     noarchive=False,
 )
 # ตัดไฟล์ที่ไม่ได้ใช้ออกจาก exe (วัดแล้วกินพื้นที่ ~50 MB บีบอัด):
