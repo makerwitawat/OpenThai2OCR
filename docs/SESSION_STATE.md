@@ -81,5 +81,5 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 - ถ้าต้องการต่อ: line-level copy, watch folder, DOCX export, code signing
 
 ## commit ล่าสุด
-- `94990d9` (ci: fix artifact rename on unix and keep release body)
-- version: v1.0.0 (tag ทดสอบผ่านทั้ง 3 OS)
+- `f023ea4` (feat(v1.1.0): limits, logging, single-instance, API key, jobs/progress, exports, bilingual UI)
+- version: v1.1.0 — release ครบ 3 OS (windows/linux/macos) + SHA ใน notes แล้ว
