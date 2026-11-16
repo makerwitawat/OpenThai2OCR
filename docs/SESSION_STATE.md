@@ -408,3 +408,21 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 ## commit ล่าสุด
 - `0ace78d` (feat(v1.4.0)) — tag `v1.4.0` · version: 1.4.0 — release แล้ว (release id RE_kwDOVv4pB84apOin)
 
+
+---
+
+## Session 11 (ต่อยอดหลัง v1.4.0 11 — lightbox แสดงกรอบ) — 2026-11-16
+
+## Completed
+- lightbox (ภาพเต็มจอ) มีกรอบ SVG คลิกเลือกบรรทัดได้ · ไฮไลต์ซิงก์ภาพหลัก/ช่องข้อความ · คลิกที่ว่างปิด (แก้ 	emplates/index.html เท่านั้น)
+- ทดสอบจริงด้วย Playwright (banner.png 3 บรรทัด) + pytest 39 ผ่าน · CHANGELOG (หัว "ยังไม่ปล่อย") + CHECKLIST อัปเดต
+
+## Active
+- การแก้ยัง **ไม่ commit** (ไฟล์: templates/index.html, CHANGELOG.md, docs/CHECKLIST.md, docs/SESSION_STATE.md)
+
+## Next Move
+- commit แล้วรวมไปกับ release ถัดไป (v1.4.1 หรือพร้อมงานอื่น)
+- ยังค้าง: เช็กมือในหน้าต่างแอป (WebView2) · smoke test exe ใน CI · พิสูจน์ pytest ล้ม → release ล้ม · Phase C (รอ .pfx)
+
+## commit ล่าสุด
+- ebed9d1 · version: 1.4.0 (โค้ดยังไม่บัมพ์)

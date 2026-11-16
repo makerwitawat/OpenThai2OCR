@@ -182,7 +182,9 @@
     display: none; place-items: center; z-index: 50; cursor: zoom-out; padding: 2rem;
   }
   .lightbox.show { display: grid; }
-  .lightbox img { max-width: 100%; max-height: 100%; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
+  .lightbox .lbstage { position: relative; line-height: 0; max-width: 100%; max-height: 100%; cursor: default; }
+  .lightbox img { display: block; max-width: 100%; max-height: calc(100vh - 4rem); box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; cursor: zoom-out; }
+  .lightbox .boxes polygon { stroke-width: 2; }
   .updbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .5rem 1.2rem;
     background: #ecfdf5; border-bottom: 1px solid #99f6e4; font-size: .85rem; color: #115e59; }
   .updbar.hidden { display: none; }
@@ -338,7 +340,7 @@
   </div>
 </main>
 
-<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+<div class="lightbox" id="lightbox"><div class="lbstage"><img id="lightboxImg" alt=""><svg id="lightboxBoxes" class="boxes" preserveAspectRatio="none" aria-hidden="true"></svg></div></div>
 
 <div class="toasts" id="toasts"></div>
 
@@ -561,6 +563,7 @@
   const cancelBtn = document.getElementById("cancelBtn");
   const lightbox = document.getElementById("lightbox");
   const lightboxImg = document.getElementById("lightboxImg");
+  const lightboxBoxes = document.getElementById("lightboxBoxes");
   const copyBtn = document.getElementById("copy");
   const saveTxtBtn = document.getElementById("saveTxt");
   const saveDocxBtn = document.getElementById("saveDocx");
@@ -922,7 +925,8 @@
     const p = pages[currentPage];
     if (!p || !p.lines || !p.lines[i]) return;
     selLine = i;
-    boxesSvg.querySelectorAll("polygon").forEach(el => el.classList.toggle("sel", +el.dataset.i === i));
+    [boxesSvg, lightboxBoxes].forEach(svg => svg.querySelectorAll("polygon")
+      .forEach(el => el.classList.toggle("sel", +el.dataset.i === i)));
     linesBox.querySelectorAll(".ln").forEach(el => el.classList.toggle("sel", +el.dataset.li === i));
     const sel = linesBox.querySelector(`.ln[data-li="${i}"]`);
     if (sel && from !== "lines") sel.scrollIntoView({ block: "nearest" });
@@ -1083,6 +1087,13 @@
   imgbox.addEventListener("click", () => {
     if (!imgbox.src) return;
     lightboxImg.src = imgbox.src;
+    // คัดลอกกรอบจากภาพหลัก (คลิกกรอบในจอเต็มก็เลือกบรรทัดได้ และไฮไลต์ซิงก์กัน)
+    lightboxBoxes.innerHTML = boxesSvg.innerHTML;
+    const vb = boxesSvg.getAttribute("viewBox");
+    if (vb) lightboxBoxes.setAttribute("viewBox", vb); else lightboxBoxes.removeAttribute("viewBox");
+    lightboxBoxes.querySelectorAll("polygon").forEach(poly => {
+      poly.addEventListener("click", e => { e.stopPropagation(); selectLine(+poly.dataset.i, "image"); });
+    });
     lightbox.classList.add("show");
   });
   lightbox.addEventListener("click", () => lightbox.classList.remove("show"));
