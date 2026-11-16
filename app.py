@@ -27,7 +27,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_file
 
 APP_NAME = "openthai2ocr"
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.3.2"
 
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 BUNDLE = Path(getattr(sys, "_MEIPASS", BASE)) if getattr(sys, "frozen", False) else BASE
@@ -968,14 +968,21 @@ def _show_info(msg: str) -> None:
 
 
 def _existing_instance(ports) -> int | None:
+    """หา instance ของแอปเราที่ **เวอร์ชันตรงกัน** เท่านั้น
+    ถ้าเจอเวอร์ชันอื่น (เช่น instance เก่าค้างอยู่) จะข้ามไป ไม่ผูกต่อ"""
     for port in ports:
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/health", timeout=0.7) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                if data.get("app") == APP_NAME:
-                    return port
         except (urllib.error.URLError, OSError, ValueError):
             continue
+        if not isinstance(data, dict) or data.get("app") != APP_NAME:
+            continue
+        if data.get("version") != APP_VERSION:
+            log.warning("พบ instance เวอร์ชัน %s ที่พอร์ต %d (เวอร์ชันนี้ %s) — ไม่ผูกต่อ ใช้พอร์ตอื่นแทน",
+                        data.get("version"), port, APP_VERSION)
+            continue
+        return port
     return None
 
 
