@@ -1,0 +1,2 @@
+# ใช้ตอน build เป็น exe เท่านั้น (ติดตั้งเพิ่มจาก requirements.txt)
+pyinstaller>=6.0

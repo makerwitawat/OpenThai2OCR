@@ -1,0 +1,9 @@
+.tmp/
+build/
+dist/
+out/
+__pycache__/
+*.pyc
+*.spec.bak
+*.checked
+.DS_Store

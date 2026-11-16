@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenThai2.0 OCR</title>
+<style>
+  :root {
+    --scale: 1;
+    --bg: #f6f8fb;
+    --panel: #ffffff;
+    --panel2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #0f766e;
+    --accent2: #14b8a6;
+    --err: #dc2626;
+    --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .05);
+  }
+  html { font-size: calc(var(--scale) * clamp(15px, 1.15vw + 5px, 20px)); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Noto Sans Thai", Leelawadee UI, system-ui, sans-serif;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef4f7 55%, #f8fafc 100%);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: .7rem;
+    padding: 1rem 1.6rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, .85);
+    backdrop-filter: blur(6px);
+    position: sticky; top: 0; z-index: 5;
+  }
+  header .logo {
+    width: 2.5rem; height: 2.5rem; border-radius: .65rem;
+    background: linear-gradient(135deg, var(--accent2), #0ea5e9);
+    display: grid; place-items: center; font-weight: 800; font-size: 1rem; color: #fff;
+  }
+  header h1 { font-size: 1.1rem; margin: 0; line-height: 1.3; }
+  header small { color: var(--muted); display: block; font-weight: 400; font-size: .8rem; }
+  .fs { margin-left: auto; display: flex; gap: .3rem; align-items: center; }
+  .fs span { color: var(--muted); font-size: .78rem; margin-right: .2rem; }
+  .fs button {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    width: 2.1rem; height: 2.1rem; border-radius: .5rem; cursor: pointer; font-size: .9rem;
+  }
+  .fs button:hover { border-color: var(--accent); color: var(--accent); }
+  main { max-width: 78rem; margin: 0 auto; padding: 1.4rem 1.6rem 3rem; }
+  .drop {
+    border: 2px dashed #cbd5e1;
+    border-radius: 1rem;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    padding: 2.4rem 1.2rem;
+    text-align: center;
+    transition: border-color .15s, background .15s;
+    cursor: pointer;
+  }
+  .drop.on { border-color: var(--accent2); background: #ecfdf5; }
+  .drop .big { font-size: 1.05rem; font-weight: 600; margin-bottom: .35rem; }
+  .drop .sub { color: var(--muted); font-size: .85rem; }
+  kbd {
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: .35rem;
+    padding: .05rem .4rem; font-size: .8em; background: var(--panel2); font-family: inherit;
+  }
+  .row { display: flex; gap: 1.1rem; margin-top: 1.2rem; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 21rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: .9rem;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .panel > h2 {
+    margin: 0; padding: .7rem 1rem; font-size: .9rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel2);
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  }
+  .bar { display: flex; gap: .4rem; align-items: center; }
+  .bar select, .bar button {
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: .5rem;
+    padding: .4rem .7rem; font-size: .82rem; cursor: pointer;
+  }
+  .bar button:hover { border-color: var(--accent); color: var(--accent); }
+  .imgwrap {
+    background: repeating-conic-gradient(#f1f5f9 0% 25%, #f8fafc 0% 50%) 50%/1.2rem 1.2rem;
+    display: grid; place-items: center;
+    min-height: 26rem; max-height: 70vh; overflow: auto;
+  }
+  .imgwrap img { max-width: 100%; display: block; }
+  #imgbox { width: 100%; }
+  .textout {
+    width: 100%; min-height: 26rem; max-height: 70vh;
+    background: var(--panel); color: var(--text);
+    border: none; resize: vertical; padding: 1rem;
+    font-size: .95rem; line-height: 1.8; font-family: "Leelawadee UI", "Noto Sans Thai", inherit;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .status { padding: .7rem 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
+  .status.err { color: var(--err); }
+  .meta { color: var(--muted); font-size: .75rem; font-weight: 400; }
+  .hidden { display: none !important; }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff; font-weight: 700; border: none;
+    padding: .7rem 1.3rem; border-radius: .65rem; font-size: .9rem; cursor: pointer;
+    box-shadow: 0 6px 16px rgba(20, 184, 166, .25);
+  }
+  button.primary:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  #go { margin: 1rem 0 .2rem; }
+  .tabs { display: flex; gap: .35rem; flex-wrap: wrap; }
+  .tabs button {
+    border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+    border-radius: .45rem; padding: .25rem .55rem; font-size: .75rem; cursor: pointer;
+  }
+  .tabs button.act { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .pages { margin-top: 1rem; }
+  .hint { font-size: .78rem; color: var(--muted); margin-top: .6rem; }
+  .opts {
+    display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+    margin-top: 1rem; padding: .6rem .9rem;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: .7rem; box-shadow: var(--shadow); font-size: .85rem;
+  }
+  .opts select {
+    margin-left: .4rem; padding: .3rem .5rem; font-size: .85rem;
+    border: 1px solid var(--border); border-radius: .45rem;
+    background: var(--panel); color: var(--text); cursor: pointer;
+  }
+  .opts .hint { margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">OT</div>
+  <h1>OpenThai2.0 OCR
+    <small>อ่านข้อความไทย/อังกฤษจากรูปและ PDF · ทำงานบนเครื่องนี้ (CPU)</small>
+  </h1>
+  <div class="fs">
+    <span>ขนาดตัวอักษร</span>
+    <button id="fsMinus" title="เล็กลง">A−</button>
+    <button id="fsReset" title="ขนาดปกติ">A</button>
+    <button id="fsPlus" title="ใหญ่ขึ้น">A+</button>
+  </div>
+</header>
+
+<main>
+  <div class="drop" id="drop">
+    <div class="big">ลากไฟล์รูปหรือ PDF มาวาง · หรือคลิกเพื่อเลือกไฟล์</div>
+    <div class="sub">วางภาพที่คัดลอกไว้ได้เลยด้วย <kbd>Ctrl</kbd> + <kbd>V</kbd> · รองรับหลายไฟล์ · PNG / JPG / BMP / TIFF / WEBP / PDF</div>
+    <input type="file" id="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff,.webp,.pdf" multiple hidden>
+  </div>
+
+  <div class="opts">
+    <label>ความละเอียดภาพ
+      <select id="scale">
+        <option value="auto" selected>อัตโนมัติ (แนะนำ)</option>
+        <option value="1">1×</option>
+        <option value="1.5">1.5×</option>
+        <option value="2">2×</option>
+      </select>
+    </label>
+    <span class="hint">ภาพหน้าจอเล็ก/ตัวอักษรเล็ก ลองเพิ่มเป็น 2× จะอ่านแม่นขึ้น</span>
+  </div>
+
+  <button class="primary" id="go" disabled>ประมวลผล OCR</button>
+
+  <div class="row">
+    <div class="col">
+      <div class="panel">
+        <h2>ภาพผลลัพธ์ <span class="meta" id="filemeta"></span></h2>
+        <div class="imgwrap" id="preview">
+          <img id="imgbox" class="hidden" alt="ผลลัพธ์">
+          <span class="sub" id="placeholder">ยังไม่มีภาพ</span>
+        </div>
+      </div>
+      <div class="pages hidden" id="pages"></div>
+      <div class="hint">เคล็ดลับ: เลือกไฟล์แล้วระบบจะเริ่มอ่านให้ทันที · ถ่ายภาพหน้าจอ (Snipaste / Print Screen) แล้วกด <kbd>Ctrl</kbd>+<kbd>V</kbd> ที่หน้านี้ได้เลย</div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h2>
+          ข้อความที่อ่านได้
+          <span class="bar">
+            <button id="copy">คัดลอก</button>
+            <button id="save">ดาวน์โหลด .txt</button>
+          </span>
+        </h2>
+        <textarea class="textout" id="out" placeholder="ผล OCR จะแสดงที่นี่…" spellcheck="false"></textarea>
+        <div class="status" id="status">รอไฟล์</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const go = document.getElementById('go');
+  const imgbox = document.getElementById('imgbox');
+  const out = document.getElementById('out');
+  const status = document.getElementById('status');
+  const filemeta = document.getElementById('filemeta');
+  const placeholder = document.getElementById('placeholder');
+  const pagesBox = document.getElementById('pages');
+  const copyBtn = document.getElementById('copy');
+  const saveBtn = document.getElementById('save');
+
+  let current = { pages: [], text: '' };
+  let currentPage = 0;
+  let currentName = '';
+  let pending = [];
+  let busy = false;
+
+  function setStatus(msg, err) {
+    status.textContent = msg;
+    status.className = 'status' + (err ? ' err' : '');
+  }
+
+  /* ---------- ขนาดตัวอักษร ---------- */
+  const root = document.documentElement;
+  let scale = parseFloat(localStorage.getItem('ocrFontScale') || '1');
+  function applyScale() {
+    scale = Math.min(1.35, Math.max(0.85, Math.round(scale * 100) / 100));
+    root.style.setProperty('--scale', scale);
+    localStorage.setItem('ocrFontScale', scale);
+  }
+  document.getElementById('fsMinus').onclick = () => { scale -= 0.08; applyScale(); };
+  document.getElementById('fsPlus').onclick = () => { scale += 0.08; applyScale(); };
+  document.getElementById('fsReset').onclick = () => { scale = 1; applyScale(); };
+  applyScale();
+
+  /* ---------- เลือก/วางไฟล์ ---------- */
+  drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('on'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('on'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('on');
+    if (e.dataTransfer.files.length) startFiles([...e.dataTransfer.files], true);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) startFiles([...fileInput.files], true);
+  });
+
+  document.addEventListener('paste', e => {
+    const items = (e.clipboardData || window.clipboardData || {}).items || [];
+    const files = [];
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) {
+          const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+          const name = 'clipboard-' + new Date().toTimeString().slice(0, 8).replace(/:/g, '') + '.' + ext;
+          files.push(new File([f], name, { type: f.type }));
+        }
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      startFiles(files, false);
+      setStatus('รับภาพจาก clipboard แล้ว กำลังประมวลผล…');
+    }
+  });
+
+  function startFiles(files, replace) {
+    if (replace) {
+      current = { pages: [], text: '' };
+      currentPage = 0;
+      out.value = '';
+      imgbox.classList.add('hidden');
+      pagesBox.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+      placeholder.textContent = 'รอผลลัพธ์…';
+    }
+    pending.push(...files);
+    currentName = files[0].name;
+    filemeta.textContent = files.length > 1 ? `${files.length} ไฟล์` : files[0].name;
+    placeholder.textContent = files.length > 1 ? `${files.length} ไฟล์` : `ไฟล์: ${files[0].name}`;
+    go.disabled = true;
+    pump();
+  }
+
+  async function pump() {
+    if (busy) return;
+    busy = true;
+    try {
+      while (pending.length) {
+        const batch = pending.splice(0);
+        for (let i = 0; i < batch.length; i++) {
+          const f = batch[i];
+          setStatus(`กำลังประมวลผล ${i + 1}/${batch.length}: ${f.name} …`);
+          try {
+            const data = await postFile(f);
+            data.pages.forEach(p => { p.file = f.name; });
+            current.pages.push(...data.pages);
+            recomputeText();
+            renderPages();
+            out.value = current.text;
+            const lines = current.pages.reduce((s, p) => s + (p.n_lines || 0), 0);
+            setStatus(`สำเร็จ · ${current.pages.length} หน้า · ${lines} บรรทัด`);
+          } catch (err) {
+            setStatus(`ผิดพลาดที่ ${f.name}: ${err.message}`, true);
+          }
+        }
+      }
+    } finally {
+      busy = false;
+      go.disabled = false;
+    }
+  }
+
+  async function postFile(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const scaleSel = document.getElementById('scale');
+    if (scaleSel && scaleSel.value !== 'auto') fd.append('scale', scaleSel.value);
+    const res = await fetch('/api/ocr', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+    return data;
+  }
+
+  go.addEventListener('click', () => {
+    if (!pending.length && fileInput.files.length) startFiles([...fileInput.files], false);
+  });
+
+  function recomputeText() {
+    const groups = new Map();
+    for (const p of current.pages) {
+      if (!groups.has(p.file)) groups.set(p.file, []);
+      groups.get(p.file).push(p);
+    }
+    current.text = [...groups.entries()].map(([name, ps]) =>
+      (groups.size > 1 ? `=== ${name} ===\n` : '') +
+      ps.map(p => (ps.length > 1 ? `--- หน้า ${p.page} ---\n` : '') + p.text).join('\n\n')
+    ).join('\n\n');
+  }
+
+  function renderPages() {
+    const n = current.pages.length;
+    if (n > 1) {
+      pagesBox.classList.remove('hidden');
+      pagesBox.innerHTML = '<div class="tabs">' + current.pages.map((p, i) =>
+        `<button data-p="${i}" class="${i === currentPage ? 'act' : ''}">${p.file} · ${p.page}</button>`
+      ).join('') + '</div>';
+      pagesBox.querySelectorAll('button').forEach(b =>
+        b.addEventListener('click', () => {
+          currentPage = +b.dataset.p;
+          pagesBox.querySelectorAll('button').forEach(x => x.classList.remove('act'));
+          b.classList.add('act');
+          showPage();
+        }));
+    } else pagesBox.classList.add('hidden');
+    showPage();
+  }
+
+  function showPage() {
+    const p = current.pages[currentPage];
+    if (!p) return;
+    if (p.image) {
+      imgbox.src = 'data:image/png;base64,' + p.image;
+      imgbox.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    }
+    out.value = current.text;
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(out.value); setStatus('คัดลอกแล้ว'); }
+    catch {
+      out.select();
+      document.execCommand('copy');
+      setStatus('คัดลอกแล้ว');
+    }
+  });
+
+  saveBtn.addEventListener('click', () => {
+    if (!out.value) return;
+    const base = current.pages.length === 1
+      ? current.pages[0].file.replace(/\.[^.]+$/, '')
+      : 'ocr-results';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([out.value], { type: 'text/plain;charset=utf-8' }));
+    a.download = base + '.txt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  });
+</script>
+</body>
+</html>

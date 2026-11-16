@@ -1,0 +1,64 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt -r requirements-build.txt
+      - name: Verify models
+        run: python tools/smoke_test.py
+      - name: Build onefile
+        run: pyinstaller OpenThai2OCR.spec --noconfirm --clean
+      - name: Rename artifact per OS
+        shell: bash
+        run: |
+          set -e
+          case "${{ runner.os }}" in
+            Windows) suffix="windows-x64.exe" ;;
+            Linux)   suffix="linux-x64" ;;
+            macOS)   suffix="macos-$(uname -m)" ;;
+          esac
+          mkdir -p out
+          src=$(ls dist/OpenThai2OCR.exe dist/OpenThai2OCR 2>/dev/null | head -n 1)
+          mv "$src" "out/OpenThai2OCR-$suffix"
+          chmod +x "out/OpenThai2OCR-$suffix" 2>/dev/null || true
+          ls -l out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}
+          path: out/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: List files
+        run: ls -l dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

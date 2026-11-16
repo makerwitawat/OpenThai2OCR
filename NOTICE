@@ -1,0 +1,23 @@
+OpenThai2.0 OCR Web UI
+Copyright 2026 contributors
+
+This product uses the following third-party components:
+
+1. OpenThai2.0-OCR-Text (models: det.onnx, rec.onnx, rec_dict.txt;
+   runtime: models/runtime/line_engine.py, models/runtime/thai_norm.py)
+   Copyright iApp Technology
+   Licensed under the Apache License, Version 2.0
+   https://huggingface.co/iapp/OpenThai2.0-OCR-Text
+
+2. PP-OCRv6-tiny detector (PaddlePaddle)
+   Copyright PaddlePaddle authors
+   Licensed under the Apache License, Version 2.0
+   https://github.com/PaddlePaddle/PaddleOCR
+
+3. Flask (BSD-3-Clause), Waitress (ZPL-2.1), OpenCV (Apache-2.0),
+   NumPy (BSD-3-Clause), ONNX Runtime (MIT), PyMuPDF (AGPL-3.0),
+   Pyclipper (MIT), PyInstaller (GPL-2.0 with exception)
+
+PyMuPDF is used to render PDF pages. If you redistribute this software
+commercially, review the AGPL-3.0 terms of PyMuPDF (or replace it with
+a permissively licensed renderer).
