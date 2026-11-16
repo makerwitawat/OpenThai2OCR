@@ -244,8 +244,9 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 - `dist_next/` เพิ่มใน .gitignore
 
 ## Active
-- **ต้องปิด exe เก่าที่ค้างอยู่ (PID 7720/15892, เปิดเมื่อ 16:00) แล้วเอา `dist_next\OpenThai2OCR.exe`
-  ไปแทน `dist\OpenThai2OCR.exe`** — ตอนนี้ยังแทนไม่ได้เพราะไฟล์ถูกล็อก
+- ไม่มี — แทน `dist\OpenThai2OCR.exe` ด้วย build ใหม่แล้ว (ปิด instance เก่า PID 7720/15892)
+  · ทดสอบ exe ใน dist: version 1.3.0, `/docs` `/playground` `/status` = 200, `/api/prefs` อ่านค่าได้
+  · `%LOCALAPPDATA%\OpenThai2OCR\settings.json` = `start_mode: "window"` → ดับเบิลคลิกเปิดหน้าต่างโปรแกรม
 
 ## Blocked
 - code signing ยังไม่มีใบรับรอง · อ่านภาพโดยตรงไม่ได้
