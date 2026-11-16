@@ -26,9 +26,9 @@
 
 | ไฟล์ | SHA256 |
 |---|---|
-| `OpenThai2OCR-windows-x64.exe` | `<รอ CI>` |
-| `OpenThai2OCR-linux-x64` | `<รอ CI>` |
-| `OpenThai2OCR-macos-arm64` | `<รอ CI>` |
+| `OpenThai2OCR-windows-x64.exe` | `d1bc3cd55ff1c8e0007796c91b2a864603877c273acfa84483f2b7dfbf056070` |
+| `OpenThai2OCR-linux-x64` | `eef85e32cdf4e821bc05fe04781d0e61f6deba39ad672d932ce7a54354fdb4f2` |
+| `OpenThai2OCR-macos-arm64` | `86a508b6e06d59030db667b57c7c49cfe6e3d65a06484aba8856af2c44824799` |
 
 ### 🔗 ลิงก์
 - คู่มือการใช้งาน: [docs/USAGE.md](https://github.com/makerwitawat/OpenThai2OCR/blob/master/docs/USAGE.md)

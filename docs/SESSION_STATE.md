@@ -337,3 +337,35 @@ build/tag/ปล่อย v1.3.0 พร้อม release notes + SHA256 (ต่�
 ## commit ล่าสุด
 - `e720dbc` (docs: fill v1.3.0 SHA256 table and session state)
 - version: 1.3.1 (ในโค้ด) — ยังไม่ tag/release
+
+## Session 9 (v1.3.1 — ปล่อย release) — 2026-11-16
+
+## Objective
+ปล่อย v1.3.1 (แก้ดาวน์โหลดในโหมดหน้าต่าง + กล่องยืนยัน/toast ใหม่) ต่อจาก Session 8
+
+## Completed
+- tag `v1.3.1` บน commit `91e3f14` → CI `release` + `ci` ผ่านทั้งหมด
+  · GitHub Release `v1.3.1` (id 446981212) มี 3 asset
+- เติม SHA256 จริงใน notes → `release-notes-patch.py` PATCH ผ่าน ภาษาไทยปกติ (ตรวจ `.checked`)
+- ดาวน์โหลด asset Windows จาก release → ตรวจ SHA ตรง → แทน `dist\OpenThai2OCR.exe`
+  (`d1bc3cd5…6070`, 151 MB) · ทดสอบเร็ว ๆ: `/api/health` = 1.3.1
+- `dist` กับ release ตรงกันแล้ว (SHA เดียวกัน)
+
+## ข้อควรระวัง
+- build ในเครื่องได้ exe ~123 MB แต่ CI ได้ ~151 MB (ชุด DLL ของ pythonnet/WebView2 ต่างกัน)
+  → ใช้ asset จาก release เป็นตัวแทน dist เพื่อให้ SHA ตรงกับที่ผู้ใช้ดาวน์โหลด
+
+## Active
+- ไม่มี — v1.3.1 ปล่อยแล้ว
+
+## Blocked
+- code signing ยังไม่มีใบรับรอง (โครงพร้อม)
+- Linux/macOS โหมดหน้าต่างต้องมี GTK/WebKit — ถ้าไม่มีจะ fallback เปิดเบราว์เซอร์
+
+## Next Move
+- รอฟีดแบ็กหน้า `/docs` `/playground` `/status` และโหมดหน้าต่าง
+- ถ้าจะเซ็นจริง: ใส่ secret `WINDOWS_PFX_BASE64` + `WINDOWS_PFX_PASSWORD` ก่อน push tag ถัดไป
+
+## commit ล่าสุด
+- `91e3f14` (docs: add v1.3.1 release notes) — tag `v1.3.1`
+- version: 1.3.1 — release แล้ว (release id 446981212)
