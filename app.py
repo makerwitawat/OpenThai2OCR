@@ -17,6 +17,7 @@ import traceback
 import urllib.error
 import urllib.request
 import webbrowser
+from urllib.parse import urlparse
 import zipfile
 from collections import OrderedDict
 from xml.sax.saxutils import escape as xml_escape
@@ -94,9 +95,11 @@ def load_prefs() -> dict:
     return {}
 
 
-def save_prefs(updates: dict) -> dict:
+def save_prefs(updates: dict, remove: tuple | list = ()) -> dict:
     data = load_prefs()
     data.update(updates)
+    for key in remove:
+        data.pop(key, None)
     targets = [FALLBACK_SETTINGS]
     if SETTINGS_FILE not in targets:
         targets.append(SETTINGS_FILE)
@@ -709,6 +712,96 @@ def api_prefs_set():
         apply_start_mode(updated["start_mode"])
     log.info("prefs updated: %s", updated)
     return jsonify({"ok": True, **updated})
+
+
+# ---------------------------------------------------------------- config API (หน้า /settings)
+def _config_snapshot() -> dict:
+    """ค่าที่ใช้งานอยู่ตอนนี้ ในรูปเดียวกับที่เขียนใน settings.json"""
+    out = {}
+    for key, (kind, _lo, _hi, name, scale) in CONFIG_SCHEMA.items():
+        value = globals()[name]
+        if kind == "float":
+            value = round(value / scale, 4)
+        elif kind in ("path", "pathstr"):
+            value = str(value)
+        out[key] = value
+    return out
+
+
+_CONFIG_DEFAULTS: dict = {}  # เติมท้ายไฟล์ (ก่อน apply_config แก้ค่า)
+
+
+def _normalize_config(key: str, raw):
+    """ค่าที่จะเขียนลง settings.json (ตรวจแล้วด้วย _coerce_config)"""
+    kind = CONFIG_SCHEMA[key][0]
+    _coerce_config(key, raw)
+    if kind == "int":
+        return int(raw)
+    if isinstance(raw, str):
+        if kind == "choice":
+            return raw.strip().upper()
+        if kind != "str" or key == "host":
+            return raw.strip()
+    return raw
+
+
+def _config_request_ok():
+    """แก้/ดู config ได้เฉพาะจากเครื่องนี้ และเฉพาะหน้าเว็บของแอปเอง (กัน CSRF จากเว็บอื่น)"""
+    if not _is_local():
+        return jsonify({"ok": False, "error": "ตั้งค่าได้จากเครื่องนี้เท่านั้น"}), 403
+    origin = request.headers.get("Origin")
+    if origin and urlparse(origin).netloc != request.host:
+        return jsonify({"ok": False, "error": "origin ไม่ตรงกับแอป"}), 403
+    return None
+
+
+@app.get("/settings")
+def settings_page():
+    return render_template("settings.html", version=APP_VERSION, auth_required=bool(API_KEY))
+
+
+@app.get("/api/config")
+def api_config_get():
+    denied = _config_request_ok()
+    if denied:
+        return denied
+    saved = load_prefs()
+    effective = _config_snapshot()
+    items = []
+    for key, (kind, lo, hi, _name, _scale) in CONFIG_SCHEMA.items():
+        items.append({"key": key, "kind": kind, "min": lo if kind in ("int", "float") else None,
+                      "max": hi, "choices": list(lo) if kind == "choice" else None,
+                      "default": _CONFIG_DEFAULTS.get(key), "effective": effective[key],
+                      "saved": saved.get(key), "is_set": key in saved})
+    return jsonify({"ok": True, "file": str(_settings_file(writable=True)), "items": items})
+
+
+@app.post("/api/config")
+def api_config_set():
+    denied = _config_request_ok()
+    if denied:
+        return denied
+    body = request.get_json(silent=True) or {}
+    values, reset = body.get("values") or {}, body.get("reset") or []
+    if not isinstance(values, dict) or not isinstance(reset, list):
+        return jsonify({"ok": False, "error": "รูปแบบข้อมูลไม่ถูกต้อง"}), 400
+    errors, clean = {}, {}
+    for key, raw in values.items():
+        if key not in CONFIG_SCHEMA:
+            errors[key] = "ไม่รู้จัก key นี้"
+            continue
+        try:
+            clean[key] = _normalize_config(key, raw)
+        except (ValueError, TypeError) as exc:
+            errors[key] = str(exc)
+    drop = [k for k in reset if k in CONFIG_SCHEMA]
+    if errors:
+        return jsonify({"ok": False, "error": "ค่าบางตัวใช้ไม่ได้", "errors": errors}), 400
+    if not clean and not drop:
+        return jsonify({"ok": False, "error": "ไม่มีค่าที่จะบันทึก"}), 400
+    save_prefs(clean, remove=drop)
+    log.info("config saved: set=%s reset=%s (ต้องรีสตาร์ตจึงมีผล)", sorted(clean), drop)
+    return jsonify({"ok": True, "saved": sorted(clean), "reset": drop, "restart_required": True})
 
 
 # ---------------------------------------------------------------- update check
@@ -1395,6 +1488,8 @@ def main():
     serve(app, host=host, port=PORT, threads=SERVER_THREADS)
     return 0
 
+
+_CONFIG_DEFAULTS.update(_config_snapshot())
 
 if __name__ == "__main__":
     sys.exit(main())

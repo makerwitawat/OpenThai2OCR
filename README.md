@@ -77,8 +77,9 @@ python app.py --watch "D:\inbox"           # เฝ้าโฟลเดอร�
 
 ### ตั้งค่าเอง (`settings.json`)
 
-ใส่ key ที่ต้องการลงใน `settings.json` (ข้าง exe หรือ `%LOCALAPPDATA%\OpenThai2OCR\`) — ดูตัวอย่างที่
-`settings.example.json` · **ลำดับความสำคัญ: flag CLI > settings.json > ค่าเริ่มต้น** · ต้องรีสตาร์ตโปรแกรมจึงมีผล
+แก้ในหน้าเว็บ **ตั้งค่า** (`/settings`) ได้เลย — ตรวจค่าให้ มีปุ่มกลับค่าเริ่มต้น และเตือนว่าต้องรีสตาร์ต
+(เปิดได้เฉพาะจากเครื่องที่รันโปรแกรม) · หรือใส่ key เองลงใน `settings.json` (ข้าง exe หรือ
+`%LOCALAPPDATA%\OpenThai2OCR\`) ดูตัวอย่างที่ `settings.example.json` · **ลำดับความสำคัญ: flag CLI > settings.json > ค่าเริ่มต้น** · ต้องรีสตาร์ตโปรแกรมจึงมีผล
 ค่าที่ผิดชนิด/เกินช่วงจะถูกข้ามและเตือนใน log (`logs/openthai-ocr.log`) · path แบบ relative อิงโฟลเดอร์ข้างโปรแกรม
 (รองรับ `~` และ `%VAR%`) · ถ้าตั้ง `api_key` ในไฟล์ ให้ระวังสิทธิ์อ่านไฟล์นี้
 

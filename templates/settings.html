@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings — OpenThai2.0 OCR</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --scale: 1;
+    --panel:#fff; --panel2:#f1f5f9; --border:#e2e8f0; --text:#0f172a;
+    --muted:#64748b; --accent:#0f766e; --accent2:#14b8a6; --err:#dc2626; --warn:#b45309;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.05);
+  }
+  html { font-size: calc(var(--scale) * clamp(15px, 1.15vw + 5px, 20px)); }
+  * { box-sizing:border-box; }
+  body { margin:0; color:var(--text); min-height:100vh; font-size:1rem;
+    font-family:"Segoe UI","Noto Sans Thai",Leelawadee UI,system-ui,sans-serif;
+    background:linear-gradient(180deg,#f8fafc 0%,#eef4f7 55%,#f8fafc 100%); }
+  header { display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; padding:.9rem 1.6rem;
+    border-bottom:1px solid var(--border); background:rgba(255,255,255,.9);
+    backdrop-filter:blur(6px); position:sticky; top:0; z-index:20; }
+  header .logo { width:2.4rem; height:2.4rem; border-radius:.6rem;
+    background:linear-gradient(135deg,var(--accent2),#0ea5e9);
+    display:grid; place-items:center; font-weight:800; font-size:.95rem; color:#fff; }
+  header h1 { font-size:1.05rem; margin:0; line-height:1.3; }
+  header small { color:var(--muted); display:block; font-weight:400; font-size:.78rem; }
+  .nav { display:flex; gap:.2rem; align-items:center; margin-left:.6rem; flex-wrap:wrap; }
+  .nav a { text-decoration:none; color:var(--muted); font-size:.78rem;
+    padding:.3rem .55rem; border-radius:.45rem; border:1px solid transparent; }
+  .nav a:hover { color:var(--accent); border-color:var(--border); background:var(--panel); }
+  .nav a.act { color:#fff; background:var(--accent); border-color:var(--accent); }
+  .head-actions { margin-left:auto; display:flex; gap:.4rem; align-items:center; }
+  .head-actions button { border:1px solid var(--border); background:var(--panel); color:var(--text);
+    border-radius:.5rem; padding:.4rem .6rem; cursor:pointer; font-size:.8rem; }
+  .head-actions button:hover { border-color:var(--accent); color:var(--accent); }
+  .fs { display:flex; gap:.25rem; align-items:center; }
+  .fs button { width:2rem; height:2rem; padding:0; }
+  .ver { color:var(--muted); font-size:.72rem; }
+  main { max-width:60rem; margin:0 auto; padding:1.3rem 1.6rem 6rem; }
+  h2 { font-size:.95rem; margin:1.5rem 0 .6rem; }
+  .group { background:var(--panel); border:1px solid var(--border); border-radius:.9rem;
+    box-shadow:var(--shadow); padding:.3rem 1.1rem; }
+  .row { display:grid; grid-template-columns:minmax(10rem,14rem) 1fr; gap:.4rem 1rem;
+    padding:.75rem 0; border-bottom:1px solid var(--border); align-items:start; }
+  .row:last-child { border-bottom:none; }
+  .row .name { font-weight:600; font-size:.86rem; }
+  .row .name code, .row .desc code { background:var(--panel2); border:1px solid var(--border);
+    border-radius:.3rem; padding:.02rem .28rem; font-size:.8em; font-weight:400; }
+  .row .desc { color:var(--muted); font-size:.74rem; line-height:1.6; margin-top:.2rem; }
+  .field { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+  .field input, .field select { flex:1 1 12rem; min-width:0; padding:.45rem .6rem; font-size:.86rem;
+    border:1px solid var(--border); border-radius:.5rem; background:#fff; color:var(--text);
+    font-family:inherit; }
+  .field input:focus, .field select:focus { outline:2px solid var(--accent2); outline-offset:1px; }
+  .field input.changed, .field select.changed { border-color:var(--accent); background:#f0fdfa; }
+  .field input.invalid { border-color:var(--err); background:#fef2f2; }
+  .mini { border:1px solid var(--border); background:var(--panel); color:var(--muted);
+    border-radius:.45rem; padding:.35rem .55rem; cursor:pointer; font-size:.72rem; }
+  .mini:hover { border-color:var(--accent); color:var(--accent); }
+  .meta { color:var(--muted); font-size:.72rem; margin-top:.3rem; width:100%; }
+  .meta .pend { color:var(--warn); font-weight:600; }
+  .err { color:var(--err); font-size:.74rem; margin-top:.25rem; width:100%; }
+  .banner { border-radius:.7rem; padding:.7rem .9rem; font-size:.84rem; margin:.4rem 0 .8rem;
+    border:1px solid var(--border); background:var(--panel); }
+  .banner.ok { background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+  .banner.bad { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+  .banner.warn { background:#fffbeb; border-color:#fde68a; color:#92400e; }
+  .hint { color:var(--muted); font-size:.76rem; line-height:1.7; }
+  .savebar { position:fixed; left:0; right:0; bottom:0; z-index:15; display:flex; gap:.6rem;
+    align-items:center; justify-content:center; padding:.7rem 1rem;
+    background:rgba(255,255,255,.95); border-top:1px solid var(--border); backdrop-filter:blur(6px); }
+  .savebar button { border:1px solid var(--border); background:var(--panel); color:var(--text);
+    border-radius:.55rem; padding:.5rem 1.1rem; cursor:pointer; font-size:.86rem; }
+  .savebar button.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+  .savebar button:disabled { opacity:.5; cursor:default; }
+  .savebar .cnt { color:var(--muted); font-size:.78rem; }
+  @media (max-width:700px) { main { padding:1rem .9rem 6rem; } .row { grid-template-columns:1fr; } }
+</style>
+</head>
+<body data-version="{{ version }}" data-auth="{{ 1 if auth_required else 0 }}">
+<header>
+  <div class="logo">OT</div>
+  <h1>OpenThai2.0 OCR <small data-th="ตั้งค่าโปรแกรม" data-en="Settings">ตั้งค่าโปรแกรม</small></h1>
+  <nav class="nav">
+    <a href="/" data-th="OCR" data-en="OCR">OCR</a>
+    <a href="/docs" data-th="สอนใช้ API" data-en="API guide">สอนใช้ API</a>
+    <a href="/playground" data-th="ทดสอบ API" data-en="API playground">ทดสอบ API</a>
+    <a href="/status" data-th="สถานะ" data-en="Status">สถานะ</a>
+    <a href="/settings" class="act" data-th="ตั้งค่า" data-en="Settings">ตั้งค่า</a>
+  </nav>
+  <div class="head-actions">
+    <button id="langBtn">EN</button>
+    <div class="fs">
+      <button id="fsMinus" title="A−">A−</button>
+      <button id="fsReset" title="A">A</button>
+      <button id="fsPlus" title="A+">A+</button>
+    </div>
+    <span class="ver">v{{ version }}</span>
+  </div>
+</header>
+
+<main>
+  <div id="notice"></div>
+  <p class="hint" id="intro"></p>
+  <div id="groups"></div>
+</main>
+
+<div class="savebar">
+  <span class="cnt" id="cnt"></span>
+  <button id="revertBtn" data-th="ยกเลิกการแก้" data-en="Discard edits">ยกเลิกการแก้</button>
+  <button id="saveBtn" class="primary" data-th="บันทึก" data-en="Save">บันทึก</button>
+</div>
+
+<script>
+  /* หน้านี้เขียนลง settings.json ผ่าน GET/POST /api/config — แก้ได้เฉพาะจากเครื่องนี้ · มีผลหลังรีสตาร์ต */
+  const TXT = {
+    th: {
+      intro: "ค่าที่แก้ที่นี่จะถูกเก็บใน <code>settings.json</code> และ<b>มีผลเมื่อรีสตาร์ตโปรแกรม</b> · flag CLI ที่ใช้ตอนเปิดจะชนะค่าในไฟล์",
+      file: "ไฟล์", def: "ค่าเริ่มต้น", reset: "ใช้ค่าเริ่มต้น", range: "ช่วง", show: "แสดง", hide: "ซ่อน",
+      saved: "บันทึกแล้ว — รีสตาร์ตโปรแกรมเพื่อให้ค่าใหม่มีผล", nothing: "ไม่มีค่าที่เปลี่ยน",
+      edits: n => n ? `แก้ไว้ ${n} ค่า` : "", running: "ใช้งานอยู่ตอนนี้", pending: "ต้องรีสตาร์ต",
+      denied: "หน้านี้ตั้งค่าได้เฉพาะจากเครื่องที่รันโปรแกรมเท่านั้น", loadFail: "โหลดค่าตั้งไม่ได้",
+      keyNeeded: "ต้องใช้ API key — ไปกรอกที่หน้า OCR ก่อน", saveFail: "บันทึกไม่ได้",
+      lanWarn: "host ที่ไม่ใช่ 127.0.0.1 จะเปิดให้เครื่องอื่นเรียกได้ — ควรตั้ง api_key ด้วย (ไม่ตั้งโปรแกรมจะสุ่ม key ให้ตอนเปิด)",
+      empty: "(ว่าง)", needNum: "ต้องเป็นตัวเลข"
+    },
+    en: {
+      intro: "Values are stored in <code>settings.json</code> and <b>apply after restarting the app</b> · CLI flags used at launch override the file.",
+      file: "File", def: "Default", reset: "Use default", range: "Range", show: "show", hide: "hide",
+      saved: "Saved — restart the app for the new values to take effect", nothing: "Nothing changed",
+      edits: n => n ? `${n} edited` : "", running: "Running now", pending: "restart needed",
+      denied: "Settings can only be changed from the machine running the app", loadFail: "Cannot load settings",
+      keyNeeded: "API key required — enter it on the OCR page first", saveFail: "Could not save",
+      lanWarn: "A host other than 127.0.0.1 exposes the app to other machines — set an api_key too (otherwise one is generated at start)",
+      empty: "(empty)", needNum: "Must be a number"
+    }
+  };
+  const META = {
+    host: ["Host", "ที่อยู่ที่เปิดฟัง · <code>127.0.0.1</code> = เฉพาะเครื่องนี้ · <code>0.0.0.0</code> = ทั้ง LAN", "Listen address · 127.0.0.1 = this machine only · 0.0.0.0 = whole LAN"],
+    port: ["พอร์ตเริ่มต้น", "พอร์ตแรกที่ลองใช้", "First port to try"],
+    port_tries: ["จำนวนพอร์ตที่ลอง", "ถ้าพอร์ตไม่ว่างจะไล่ไปพอร์ตถัดไปจนครบจำนวนนี้", "How many consecutive ports to try if busy"],
+    server_threads: ["thread ของเซิร์ฟเวอร์", "จำนวนคำขอที่รับพร้อมกัน", "Concurrent request handlers"],
+    model_dir: ["โฟลเดอร์โมเดล", "ต้องมี det.onnx, rec.onnx, rec_dict.txt, config.json · relative = อิงโฟลเดอร์ข้างโปรแกรม", "Needs det.onnx, rec.onnx, rec_dict.txt, config.json · relative = next to the app"],
+    log_dir: ["โฟลเดอร์ log", "ไฟล์ openthai-ocr.log (หมุนไฟล์ 2 MB × 3)", "Holds openthai-ocr.log (rotated 2 MB × 3)"],
+    log_level: ["ระดับ log", "DEBUG ละเอียดสุด · ERROR เงียบสุด", "DEBUG most verbose · ERROR quietest"],
+    watch_dir: ["โฟลเดอร์ที่เฝ้า", "ไฟล์ใหม่ในโฟลเดอร์นี้จะถูก OCR อัตโนมัติ · ว่าง = ปิด", "New files here are OCR'd automatically · empty = off"],
+    watch_out: ["โฟลเดอร์ผลลัพธ์ของ watch", "ว่าง = สร้าง <code>ocr-results/</code> ในโฟลเดอร์ที่เฝ้า", "Empty = <code>ocr-results/</code> inside the watched folder"],
+    watch_interval: ["ตรวจทุก (วินาที)", "ความถี่ในการสแกนโฟลเดอร์", "Scan frequency"],
+    max_upload_mb: ["ขนาดไฟล์สูงสุด (MB)", "ไฟล์ใหญ่กว่านี้จะถูกปฏิเสธ", "Larger uploads are rejected"],
+    max_pages: ["หน้า PDF สูงสุด", "PDF ที่มีหน้าเกินจะถูกปฏิเสธ", "PDFs with more pages are rejected"],
+    result_keep: ["จำนวนผลลัพธ์ที่เก็บไว้", "เก็บในหน่วยความจำเพื่อ export/แก้ข้อความ", "Kept in memory for export / editing"],
+    max_edit_chars: ["ความยาวข้อความที่แก้ได้", "จำนวนตัวอักษรสูงสุดตอน export แบบแก้ข้อความ", "Max characters for edited-text export"],
+    engine_threads: ["thread ของ engine OCR", "เพิ่มได้ถ้า CPU เหลือ", "Raise if you have spare CPU"],
+    pdf_zoom: ["ซูมตอนแปลง PDF", "สูง = คมขึ้นแต่ช้าและกินแรมมากขึ้น", "Higher = sharper but slower / more RAM"],
+    annotate_max_width: ["ความกว้างภาพผลลัพธ์สูงสุด (px)", "ภาพที่ส่งกลับให้หน้าเว็บถูกย่อถ้ากว้างเกินนี้", "Result images wider than this are downscaled"],
+    api_key: ["API key", "ว่าง = ไม่ตรวจ (ยกเว้นเปิด LAN โปรแกรมจะสุ่มให้) · เก็บเป็นข้อความธรรมดาในไฟล์", "Empty = no check (a key is generated for LAN mode) · stored as plain text"],
+    cors_origin: ["CORS origin", "ค่า Access-Control-Allow-Origin · <code>*</code> = ทุกเว็บ · ว่าง = ปิด", "Access-Control-Allow-Origin · * = any site · empty = disabled"],
+    update_timeout: ["timeout เช็กอัปเดต (วินาที)", "รอ GitHub ตอบนานสุดเท่านี้", "How long to wait for GitHub"],
+    update_ttl_hours: ["แคชผลเช็กอัปเดต (ชั่วโมง)", "ไม่เช็กซ้ำภายในเวลานี้", "No re-check within this window"]
+  };
+  const GROUPS = [
+    ["เซิร์ฟเวอร์", "Server", ["host", "port", "port_tries", "server_threads"]],
+    ["โฟลเดอร์และ log", "Folders & logs", ["model_dir", "log_dir", "log_level"]],
+    ["เฝ้าโฟลเดอร์", "Watch folder", ["watch_dir", "watch_out", "watch_interval"]],
+    ["ขีดจำกัด", "Limits", ["max_upload_mb", "max_pages", "result_keep", "max_edit_chars"]],
+    ["OCR และภาพ", "OCR & images", ["engine_threads", "pdf_zoom", "annotate_max_width"]],
+    ["ความปลอดภัย", "Security", ["api_key", "cors_origin"]],
+    ["อัปเดต", "Updates", ["update_timeout", "update_ttl_hours"]]
+  ];
+
+  let lang = localStorage.getItem("ocrLang") || "th";
+  const T = k => TXT[lang][k];
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const AUTH = document.body.dataset.auth === "1";
+  const apiKey = () => localStorage.getItem("ocrApiKey") || "";
+  let items = [], configFile = "", notice = null;
+  const fieldEls = {};   // key -> {input, row}
+  const resetFlags = new Set();
+
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-th]").forEach(el => { el.innerHTML = lang === "en" ? el.dataset.en : el.dataset.th; });
+    document.getElementById("langBtn").textContent = lang === "th" ? "EN" : "ไทย";
+    document.getElementById("intro").innerHTML = T("intro") +
+      (configFile ? `<br>${T("file")}: <code>${esc(configFile)}</code>` : "");
+    if (items.length) {
+      prev = {};   // เก็บค่าที่พิมพ์ค้างไว้ก่อนสร้างฟอร์มใหม่
+      for (const [k, f] of Object.entries(fieldEls)) prev[k] = f.input.value;
+      build();
+      prev = {};
+    }
+  }
+  document.getElementById("langBtn").onclick = () => {
+    lang = lang === "th" ? "en" : "th"; localStorage.setItem("ocrLang", lang); applyLang();
+  };
+
+  const root = document.documentElement;
+  let scale = parseFloat(localStorage.getItem("ocrFontScale") || "1");
+  function applyScale() {
+    scale = Math.min(1.35, Math.max(0.85, Math.round(scale * 100) / 100));
+    root.style.setProperty("--scale", scale); localStorage.setItem("ocrFontScale", scale);
+  }
+  document.getElementById("fsMinus").onclick = () => { scale -= 0.08; applyScale(); };
+  document.getElementById("fsPlus").onclick = () => { scale += 0.08; applyScale(); };
+  document.getElementById("fsReset").onclick = () => { scale = 1; applyScale(); };
+  applyScale();
+
+  function showNotice(kind, html) {
+    document.getElementById("notice").innerHTML = html ? `<div class="banner ${kind}">${html}</div>` : "";
+  }
+
+  async function call(url, opts = {}) {
+    opts.headers = Object.assign({}, opts.headers || {});
+    if (AUTH && apiKey()) opts.headers["X-API-Key"] = apiKey();
+    const res = await fetch(url, opts);
+    let data = null;
+    try { data = await res.json(); } catch { /* ไม่ใช่ JSON */ }
+    return { res, data };
+  }
+
+  const shown = it => it.is_set ? it.saved : it.default;   // ค่าที่ควรอยู่ในช่องตอนโหลด
+  const same = (a, b) => String(a) === String(b);
+
+  function build() {
+    const wrap = document.getElementById("groups");
+    wrap.innerHTML = "";
+    const byKey = Object.fromEntries(items.map(i => [i.key, i]));
+    for (const [th, en, keys] of GROUPS) {
+      const h = document.createElement("h2"); h.textContent = lang === "th" ? th : en; wrap.appendChild(h);
+      const box = document.createElement("div"); box.className = "group"; wrap.appendChild(box);
+      for (const key of keys) {
+        const it = byKey[key]; if (!it) continue;
+        const meta = META[key] || [key, "", ""];
+        const row = document.createElement("div"); row.className = "row";
+        const range = (it.kind === "int" || it.kind === "float") ? ` · ${T("range")} ${it.min}–${it.max}` : "";
+        row.innerHTML = `<div><div class="name">${esc(meta[0])}
+            <code>${esc(key)}</code></div><div class="desc">${lang === "th" ? meta[1] : meta[2]}${range}</div></div>
+          <div><div class="field"></div><div class="meta"></div><div class="err"></div></div>`;
+        const field = row.querySelector(".field");
+        let input;
+        if (it.kind === "choice") {
+          input = document.createElement("select");
+          it.choices.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; input.appendChild(o); });
+        } else {
+          input = document.createElement("input");
+          input.type = (it.kind === "int" || it.kind === "float") ? "number" : (key === "api_key" ? "password" : "text");
+          if (input.type === "number") { input.min = it.min; input.max = it.max; input.step = it.kind === "int" ? 1 : "any"; }
+          input.autocomplete = "off"; input.spellcheck = false;
+        }
+        input.value = prev[key] !== undefined ? prev[key] : shown(it);
+        input.dataset.key = key;
+        field.appendChild(input);
+        if (key === "api_key") {
+          const eye = document.createElement("button"); eye.type = "button"; eye.className = "mini"; eye.textContent = T("show");
+          eye.onclick = () => { const hide = input.type === "password"; input.type = hide ? "text" : "password"; eye.textContent = hide ? T("hide") : T("show"); };
+          field.appendChild(eye);
+        }
+        const rst = document.createElement("button"); rst.type = "button"; rst.className = "mini"; rst.textContent = T("reset");
+        rst.onclick = () => { input.value = it.default; refreshRow(key); };
+        field.appendChild(rst);
+        input.addEventListener("input", () => { row.querySelector(".err").textContent = ""; input.classList.remove("invalid"); refreshRow(key); });
+        box.appendChild(row);
+        fieldEls[key] = { input, row, it };
+        refreshRow(key);
+      }
+    }
+    updateCount();
+  }
+  let prev = {};   // เก็บค่าที่พิมพ์ค้างไว้ตอนสลับภาษา
+
+  function refreshRow(key) {
+    const { input, row, it } = fieldEls[key];
+    const base = shown(it);
+    input.classList.toggle("changed", !same(input.value, base));
+    const eff = it.effective;
+    const parts = [`${T("def")}: <code>${esc(it.default === "" ? T("empty") : it.default)}</code>`];
+    const savedOrDefault = it.is_set ? it.saved : it.default;
+    if (!same(eff, savedOrDefault)) {
+      parts.push(`${T("running")}: <code>${esc(eff === "" ? T("empty") : eff)}</code> <span class="pend">· ${T("pending")}</span>`);
+    }
+    row.querySelector(".meta").innerHTML = parts.join(" · ");
+    updateCount();
+  }
+
+  function changes() {
+    const values = {}, reset = [];
+    for (const [key, { input, it }] of Object.entries(fieldEls)) {
+      const raw = input.value;
+      const base = shown(it);
+      if (same(raw, base)) continue;
+      if (same(raw, it.default)) { if (it.is_set) reset.push(key); continue; }
+      if (it.kind === "int" || it.kind === "float") {
+        if (raw.trim() === "" || isNaN(Number(raw))) { values[key] = raw; continue; }   // ให้เซิร์ฟเวอร์แจ้ง error
+        values[key] = Number(raw);
+      } else values[key] = raw;
+    }
+    return { values, reset };
+  }
+
+  function updateCount() {
+    if (!Object.keys(fieldEls).length) return;
+    const c = changes();
+    const n = Object.keys(c.values).length + c.reset.length;
+    document.getElementById("cnt").textContent = T("edits")(n);
+    document.getElementById("saveBtn").disabled = n === 0;
+    document.getElementById("revertBtn").disabled = n === 0;
+  }
+
+  async function load() {
+    try {
+      const { res, data } = await call("/api/config");
+      if (res.status === 403) { showNotice("bad", T("denied")); return; }
+      if (res.status === 401) { showNotice("warn", T("keyNeeded")); return; }
+      if (!data || !data.ok) throw new Error((data && data.error) || res.status);
+      items = data.items; configFile = data.file;
+      document.getElementById("intro").innerHTML = T("intro") + `<br>${T("file")}: <code>${esc(configFile)}</code>`;
+      build();
+    } catch (e) { showNotice("bad", `${T("loadFail")}: ${esc(e.message)}`); }
+  }
+
+  document.getElementById("revertBtn").onclick = () => { prev = {}; showNotice("", ""); build(); };
+  document.getElementById("saveBtn").onclick = async () => {
+    const { values, reset } = changes();
+    if (!Object.keys(values).length && !reset.length) { showNotice("warn", T("nothing")); return; }
+    document.querySelectorAll(".err").forEach(e => { e.textContent = ""; });
+    document.querySelectorAll("input.invalid").forEach(e => e.classList.remove("invalid"));
+    try {
+      const { res, data } = await call("/api/config", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ values, reset }) });
+      if (res.ok && data && data.ok) {
+        let msg = T("saved");
+        if (values.host && !["127.0.0.1", "localhost", "::1"].includes(values.host)) msg += `<br>${T("lanWarn")}`;
+        showNotice("ok", msg);
+        prev = {}; await load();
+        return;
+      }
+      if (data && data.errors) {
+        for (const [k, m] of Object.entries(data.errors)) {
+          const f = fieldEls[k]; if (!f) continue;
+          f.input.classList.add("invalid"); f.row.querySelector(".err").textContent = m;
+        }
+        showNotice("bad", esc(data.error || T("saveFail")));
+        const first = document.querySelector("input.invalid"); if (first) first.scrollIntoView({ block: "center" });
+        return;
+      }
+      showNotice("bad", esc((data && data.error) || T("saveFail")));
+    } catch (e) { showNotice("bad", `${T("saveFail")}: ${esc(e.message)}`); }
+  };
+
+  document.getElementById("intro").innerHTML = T("intro");
+  applyLang();
+  load();
+</script>
+</body>
+</html>
