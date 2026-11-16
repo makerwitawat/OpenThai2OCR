@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import queue
+import re
 import secrets
 import socket
 import sys
@@ -195,9 +196,10 @@ def decode_image(data: bytes) -> np.ndarray:
     return img
 
 
-def annotate_image(img: np.ndarray, lines: list[dict], max_width: int = 1200) -> str:
+def annotate_image(img: np.ndarray, lines: list[dict], max_width: int = 1200, draw: bool = True) -> str:
+    """draw=False → ส่งภาพเปล่า (หน้าเว็บวาดกรอบเองด้วย SVG เพื่อให้คลิกได้)"""
     img = img.copy()
-    for ln in lines:
+    for ln in (lines if draw else []):
         box = np.array(ln["box"], dtype=np.int32)
         cv2.polylines(img, [box], True, (0, 180, 0), 2)
         x0, y0 = int(box[:, 0].min()), int(box[:, 1].min())
@@ -280,7 +282,8 @@ def _resize(img: np.ndarray, scale: float) -> np.ndarray:
     return cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
 
-def read_image(img: np.ndarray, want_image: bool, scale_requested=None, settings=None) -> dict:
+def read_image(img: np.ndarray, want_image: bool, scale_requested=None, settings=None,
+               annotate: bool = True) -> dict:
     engine = get_engine()
     scale = _auto_scale(img, scale_requested)
     if scale != 1.0:
@@ -288,8 +291,9 @@ def read_image(img: np.ndarray, want_image: bool, scale_requested=None, settings
     with _ocr_lock, _engine_settings(engine, _sanitize_settings(settings)):
         result = engine.read(img)
     result["scale"] = scale
+    result["size"] = [int(img.shape[1]), int(img.shape[0])]  # [กว้าง, สูง] ของพิกัดใน lines[].box
     if want_image:
-        result["image"] = annotate_image(img, result["lines"])
+        result["image"] = annotate_image(img, result["lines"], draw=annotate)
     return result
 
 
@@ -329,7 +333,8 @@ def _analyze(ext: str, raw: bytes, options: dict, images_by_page=None):
         images = [decode_image(raw)]
     pages = []
     for i, img in enumerate(images):
-        r = read_image(img, want_images, scale_requested=scale, settings=settings)
+        r = read_image(img, want_images, scale_requested=scale, settings=settings,
+                       annotate=options.get("annotate", True))
         r["page"] = i + 1
         r["n_lines"] = len(r["lines"])
         pages.append(r)
@@ -395,7 +400,8 @@ def _job_worker():
                     break
                 r = read_image(img, job.options.get("want_images", True),
                                scale_requested=job.options.get("scale"),
-                               settings=job.options.get("settings"))
+                               settings=job.options.get("settings"),
+                               annotate=job.options.get("annotate", True))
                 r["page"] = i + 1
                 r["n_lines"] = len(r["lines"])
                 pages.append(r)
@@ -570,13 +576,13 @@ def api_prefs_get():
     prefs = load_prefs()
     return jsonify({"ok": True, "start_mode": START_MODE,
                     "open_browser": OPEN_BROWSER,
+                    "update_check": bool(prefs.get("update_check", True)),
                     "saved_start_mode": prefs.get("start_mode"),
                     "saved_open_browser": prefs.get("open_browser")})
 
 
 @app.post("/api/prefs")
 def api_prefs_set():
-    global OPEN_BROWSER, START_MODE
     body = request.get_json(silent=True) or {}
     updated = {}
     if "start_mode" in body:
@@ -587,12 +593,66 @@ def api_prefs_set():
     elif "open_browser" in body:
         updated["open_browser"] = bool(body["open_browser"])
         updated["start_mode"] = "browser" if updated["open_browser"] else "none"
+    if "update_check" in body:
+        updated["update_check"] = bool(body["update_check"])
     if not updated:
         return jsonify({"ok": False, "error": "ไม่มีค่าที่จะบันทึก"}), 400
     save_prefs(updated)
-    apply_start_mode(updated["start_mode"])
+    if "start_mode" in updated:
+        apply_start_mode(updated["start_mode"])
     log.info("prefs updated: %s", updated)
     return jsonify({"ok": True, **updated})
+
+
+# ---------------------------------------------------------------- update check
+RELEASES_API = "https://api.github.com/repos/makerwitawat/OpenThai2OCR/releases/latest"
+UPDATE_TTL = 6 * 3600
+UPDATE_RETRY = 600
+UPDATE_TIMEOUT = 5.0
+_update_cache: dict = {"at": 0.0, "data": None}
+_update_lock = threading.Lock()
+
+
+def _version_tuple(v: str) -> tuple[int, ...]:
+    nums = re.findall(r"\d+", str(v or ""))
+    return tuple(int(n) for n in nums[:4]) or (0,)
+
+
+def _fetch_latest_release() -> dict:
+    req = urllib.request.Request(RELEASES_API, headers={
+        "Accept": "application/vnd.github+json", "User-Agent": f"{APP_NAME}/{APP_VERSION}"})
+    with urllib.request.urlopen(req, timeout=UPDATE_TIMEOUT) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    if not isinstance(data, dict) or not data.get("tag_name"):
+        raise ValueError("bad release payload")
+    return data
+
+
+@app.get("/api/update-check")
+def api_update_check():
+    enabled = bool(load_prefs().get("update_check", True))
+    force = request.args.get("force") == "1"
+    base = {"ok": True, "enabled": enabled, "current": APP_VERSION,
+            "latest": None, "update_available": False, "url": None, "error": None}
+    if not enabled and not force:
+        return jsonify(base)
+    with _update_lock:
+        fresh = _update_cache["data"] is not None and time.time() - _update_cache["at"] < UPDATE_TTL
+        failed_msg = "ตรวจอัปเดตไม่ได้ (ออฟไลน์หรือ GitHub ไม่ตอบ)"
+        if not fresh and not force and time.time() - _update_cache.get("fail_at", 0.0) < UPDATE_RETRY:
+            return jsonify({**base, "error": failed_msg})  # เพิ่งล้มเหลว — อย่าลองถี่ ๆ
+        if not fresh or force:
+            try:
+                rel = _fetch_latest_release()
+                _update_cache.update(at=time.time(), fail_at=0.0, data={
+                    "latest": str(rel["tag_name"]).lstrip("vV"), "url": rel.get("html_url")})
+            except Exception as exc:  # ออฟไลน์/rate limit/ข้อมูลเพี้ยน → เงียบ ไม่ขัดการใช้งาน
+                log.info("update check failed: %s", exc)
+                _update_cache["fail_at"] = time.time()
+                return jsonify({**base, "error": failed_msg})
+        info = _update_cache["data"]
+    return jsonify({**base, "latest": info["latest"], "url": info["url"],
+                    "update_available": _version_tuple(info["latest"]) > _version_tuple(APP_VERSION)})
 
 
 @app.get("/api/status")
@@ -665,7 +725,9 @@ def _payload_from_request():
             b64 = b64.split(",", 1)[1]
         raw, name = base64.b64decode(b64), body.get("filename", "upload")
         ext = ext or ".png"
-    opts = {"want_images": str(form.get("images", "1")) not in ("0", "false", "False")}
+    opts = {"want_images": str(form.get("images", "1")) not in ("0", "false", "False"),
+            # overlay=0 → ภาพเปล่าไม่ฝังกรอบ (ให้ UI วางกรอบที่คลิกได้เอง) ค่าเริ่มต้นยังฝังกรอบเหมือนเดิม
+            "annotate": str(form.get("overlay", "1")) not in ("0", "false", "False")}
     scale = form.get("scale")
     if scale not in (None, "", "auto"):
         try:
@@ -919,12 +981,106 @@ def _export_docx(entry: dict) -> bytes:
     return buf.getvalue()
 
 
-@app.get("/api/result/<result_id>/export")
+_EDIT_PAGE_HDR = re.compile(r"^\s*---\s+\S+\s+(\d+)\s+---\s*$")
+_EDIT_FILE_HDR = re.compile(r"^\s*===.*===\s*$")
+MAX_EDIT_CHARS = 2_000_000
+
+
+def _row_boxes(page: dict) -> list[dict]:
+    """รวมกล่องของแต่ละ row เป็นกรอบเดียว: [{row, conf, x0,y0,x1,y1}] เรียงตาม row"""
+    rows: dict[int, dict] = {}
+    for ln in page.get("lines") or []:
+        xs = [c[0] for c in ln["box"]]
+        ys = [c[1] for c in ln["box"]]
+        r = rows.setdefault(ln.get("row", 0), {"row": ln.get("row", 0), "confs": [],
+                                               "x0": 1e18, "y0": 1e18, "x1": -1e18, "y1": -1e18})
+        r["confs"].append(ln.get("confidence", 0.0))
+        r["x0"], r["y0"] = min(r["x0"], min(xs)), min(r["y0"], min(ys))
+        r["x1"], r["y1"] = max(r["x1"], max(xs)), max(r["y1"], max(ys))
+    out = []
+    for key in sorted(rows):
+        r = rows[key]
+        r["conf"] = round(sum(r["confs"]) / len(r["confs"]), 4) if r["confs"] else 0.0
+        out.append(r)
+    return out
+
+
+def _edited_lines(page: dict, texts: list[str]) -> list[dict]:
+    """จับข้อความที่ผู้ใช้แก้ไปวางบนพิกัดของหน้า
+    - จำนวนบรรทัด = จำนวน row เดิม → ใช้กรอบของ row นั้น ๆ
+    - จำนวนต่างกัน → กระจายบรรทัดเท่า ๆ กันในแนวตั้งภายในกรอบรวมของข้อความเดิม"""
+    rows = _row_boxes(page)
+    if not rows or not texts:
+        return []
+    if len(rows) == len(texts):
+        return [{"text": t, "confidence": r["conf"], "row": i, "edited": True,
+                 "box": [[r["x0"], r["y0"]], [r["x1"], r["y0"]], [r["x1"], r["y1"]], [r["x0"], r["y1"]]]}
+                for i, (t, r) in enumerate(zip(texts, rows))]
+    x0 = min(r["x0"] for r in rows)
+    x1 = max(r["x1"] for r in rows)
+    y0 = min(r["y0"] for r in rows)
+    y1 = max(r["y1"] for r in rows)
+    band = (y1 - y0) / len(texts)
+    out = []
+    for i, t in enumerate(texts):
+        top = y0 + i * band
+        out.append({"text": t, "confidence": 0.0, "row": i, "edited": True,
+                    "box": [[x0, top], [x1, top], [x1, top + band], [x0, top + band]]})
+    return out
+
+
+def _apply_edit(entry: dict, text: str) -> dict:
+    """สร้าง entry ใหม่ที่ใช้ข้อความซึ่งผู้ใช้แก้แล้ว (ไม่แตะของเดิมในแคช)"""
+    chunks: dict[int, list[str]] = {}
+    loose: list[str] = []
+    cur = None
+    for raw_line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if _EDIT_FILE_HDR.match(raw_line):
+            continue
+        m = _EDIT_PAGE_HDR.match(raw_line)
+        if m:
+            cur = int(m.group(1))
+            chunks.setdefault(cur, [])
+            continue
+        (chunks[cur] if cur is not None else loose).append(raw_line)
+    if not chunks and len(entry["pages"]) == 1:
+        chunks = {entry["pages"][0].get("page", 1): loose}
+    new_pages = []
+    for p in entry["pages"]:
+        chunk = chunks.get(p.get("page", 1))
+        if chunk is None:
+            new_pages.append(p)
+            continue
+        texts = [ln.strip() for ln in chunk if ln.strip()]
+        q = dict(p)
+        q["text"] = "\n".join(texts)
+        q["lines"] = _edited_lines(p, texts)
+        q["n_lines"] = len(q["lines"])
+        q["edited"] = True
+        q.pop("dropped", None)
+        new_pages.append(q)
+    out = dict(entry)
+    out["pages"] = new_pages
+    out["text"] = text.strip()
+    out["edited"] = True
+    return out
+
+
+@app.route("/api/result/<result_id>/export", methods=["GET", "POST"])
 def api_export(result_id):
     entry = _get_result(result_id)
     if not entry:
         return jsonify({"ok": False, "error": "ไม่พบผลลัพธ์ (อาจหมดอายุ — ให้ประมวลผลใหม่)"}), 404
-    fmt = (request.args.get("format") or "pdf").lower()
+    body = request.get_json(silent=True) if request.method == "POST" else None
+    body = body if isinstance(body, dict) else {}
+    fmt = str(request.args.get("format") or body.get("format") or "pdf").lower()
+    edited = body.get("text")
+    if edited is not None:
+        if not isinstance(edited, str):
+            return jsonify({"ok": False, "error": "text ต้องเป็นข้อความ"}), 400
+        if len(edited) > MAX_EDIT_CHARS:
+            return jsonify({"ok": False, "error": "ข้อความยาวเกินไป"}), 413
+        entry = _apply_edit(entry, edited)
     stem = Path(entry["name"]).stem or "ocr"
     try:
         if fmt == "pdf":

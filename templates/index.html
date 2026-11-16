@@ -130,6 +130,14 @@
   }
   .imgwrap img { max-width: 100%; display: block; cursor: zoom-in; }
   #imgbox { width: 100%; }
+  .stage { position: relative; width: 100%; }
+  .boxes { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .boxes polygon { fill: transparent; stroke: #16a34a; stroke-width: 1.5; cursor: pointer;
+    vector-effect: non-scaling-stroke; pointer-events: all; }
+  .boxes polygon:hover { fill: rgba(22, 163, 74, .16); }
+  .boxes polygon.sel { fill: rgba(250, 204, 21, .38); stroke: #ca8a04; stroke-width: 2.5; }
+  .lines .ln.sel { background: #fef9c3; }
+  .lines .ln { cursor: pointer; }
   .textout {
     width: 100%; min-height: 24rem; max-height: 68vh;
     background: var(--panel); color: var(--text); border: none; resize: vertical;
@@ -175,6 +183,13 @@
   }
   .lightbox.show { display: grid; }
   .lightbox img { max-width: 100%; max-height: 100%; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
+  .updbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .5rem 1.2rem;
+    background: #ecfdf5; border-bottom: 1px solid #99f6e4; font-size: .85rem; color: #115e59; }
+  .updbar.hidden { display: none; }
+  .updbar a { color: var(--accent); font-weight: 600; }
+  .updbar button { font: inherit; font-size: .8rem; cursor: pointer; border: 1px solid var(--border);
+    background: var(--panel); border-radius: .45rem; padding: .15rem .55rem; color: var(--text); }
+  .updbar #updClose { margin-left: auto; border: none; background: none; font-size: 1.05rem; line-height: 1; }
   .toasts { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column;
     gap: .5rem; z-index: 60; max-width: min(90vw, 26rem); }
   .toast { display: flex; align-items: center; gap: .5rem; background: var(--panel);
@@ -235,6 +250,13 @@
   </div>
 </header>
 
+<div class="updbar hidden" id="updbar" role="status">
+  <span id="updText"></span>
+  <a id="updLink" href="#" target="_blank" rel="noopener noreferrer" data-i18n="updOpen">ดูรายละเอียด</a>
+  <button id="updCopy" type="button" data-i18n="updCopy">คัดลอกลิงก์</button>
+  <button id="updClose" type="button" title="close">×</button>
+</div>
+
 <main>
   <div class="drop" id="drop">
     <div class="big" data-i18n="dropBig">ลากไฟล์รูปหรือ PDF มาวาง · หรือคลิกเพื่อเลือกไฟล์</div>
@@ -260,6 +282,10 @@
         <option value="none" data-i18n="modeNone">ไม่เปิดอะไร (headless)</option>
       </select>
     </label>
+    <label class="check" title="ติดต่อ GitHub เพื่อเช็กเวอร์ชันใหม่ (ไม่ส่งไฟล์หรือข้อมูลของคุณ) / Contacts GitHub to look for a newer version (no files or data are sent)">
+      <input type="checkbox" id="updToggle" checked>
+      <span data-i18n="updToggle">ตรวจอัปเดตอัตโนมัติ</span>
+    </label>
     <span class="authbar" id="authbar">
       <span data-i18n="apiKeyLabel">API key:</span>
       <input type="password" id="apiKey" autocomplete="off">
@@ -280,7 +306,10 @@
       <div class="panel">
         <h2><span data-i18n="imageTitle">ภาพผลลัพธ์</span> <span class="meta" id="filemeta"></span></h2>
         <div class="imgwrap" id="preview">
-          <img id="imgbox" class="hidden" alt="">
+          <div class="stage hidden" id="stage">
+            <img id="imgbox" alt="">
+            <svg id="boxes" class="boxes" preserveAspectRatio="none" aria-hidden="true"></svg>
+          </div>
           <span class="sub" id="placeholder" data-i18n="noImage">ยังไม่มีภาพ</span>
         </div>
       </div>
@@ -362,6 +391,9 @@
       prefSaved: "บันทึกแล้ว — มีผลเมื่อเปิดโปรแกรมครั้งถัดไป",
       ok: "ตกลง", quitTitle: "ปิดโปรแกรม", apiKeyTitle: "ต้องใช้ API key",
       needResult: "ยังไม่มีผลลัพธ์ — อ่านไฟล์ก่อน",
+      updAvail: "มีเวอร์ชันใหม่ v{latest} (ตอนนี้ v{current})", updOpen: "ดูรายละเอียด",
+      updCopy: "คัดลอกลิงก์", updToggle: "ตรวจอัปเดตอัตโนมัติ",
+      editNoSection: "หาส่วนของไฟล์นี้ในข้อความที่แก้ไม่เจอ (หัว === ชื่อไฟล์ === ถูกลบ?) — ส่งออกด้วยผลเดิม",
       copyFailed: "คัดลอกไม่สำเร็จ",
       downloaded: "ดาวน์โหลด {name}",
       exporting: "กำลังสร้างไฟล์ {fmt}…",
@@ -400,6 +432,9 @@
       prefSaved: "Saved — applies the next time the app starts",
       ok: "OK", quitTitle: "Quit", apiKeyTitle: "API key required",
       needResult: "Nothing to export yet — read a file first",
+      updAvail: "New version v{latest} available (you have v{current})", updOpen: "View release",
+      updCopy: "Copy link", updToggle: "Check for updates",
+      editNoSection: "Could not find this file's section in the edited text (=== name === header removed?) — exporting the original result",
       copyFailed: "Copy failed",
       downloaded: "Downloading {name}",
       exporting: "Building {fmt}…",
@@ -425,6 +460,7 @@
     document.getElementById("langBtn").textContent = lang === "th" ? "EN" : "ไทย";
     linesBtn.classList.toggle("act", showLines);
     renderLines();
+    renderUpdate();
     applyStatusIfIdle();
   }
   function setStatus(text, isErr) {
@@ -511,6 +547,9 @@
   const fileInput = document.getElementById("file");
   const go = document.getElementById("go");
   const imgbox = document.getElementById("imgbox");
+  const stage = document.getElementById("stage");
+  const boxesSvg = document.getElementById("boxes");
+  let selLine = -1;
   const out = document.getElementById("out");
   const status = document.getElementById("status");
   const filemeta = document.getElementById("filemeta");
@@ -541,6 +580,7 @@
   let activeJob = null;
   let showLines = false;
   let placeholderLabel = null;
+  let lastUpd = null;
   status.dataset.idle = "1";
 
   /* ---------- i18n & font ---------- */
@@ -588,9 +628,47 @@
 
   /* ---------- prefs: how to open on start ---------- */
   const modeSel = document.getElementById("startMode");
+  const updToggle = document.getElementById("updToggle");
   fetch("/api/prefs").then(r => r.json()).then(d => {
-    if (d && d.ok) modeSel.value = d.start_mode;
+    if (d && d.ok) {
+      modeSel.value = d.start_mode;
+      updToggle.checked = d.update_check !== false;
+      if (updToggle.checked) checkUpdate();
+    }
   }).catch(() => {});
+  updToggle.addEventListener("change", async () => {
+    try {
+      await api("/api/prefs", { method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ update_check: updToggle.checked }) });
+    } catch { /* เก็บค่าไม่ได้ — ไม่ขัดการใช้งาน */ }
+    if (updToggle.checked) checkUpdate(); else { lastUpd = null; renderUpdate(); }
+  });
+
+  /* ---------- update check ---------- */
+  const updbar = document.getElementById("updbar");
+  async function checkUpdate() {
+    try {
+      const d = await (await api("/api/update-check")).json();
+      lastUpd = d && d.ok && d.update_available &&
+        sessionStorage.getItem("ocrUpdDismissed") !== d.latest ? d : null;
+    } catch { lastUpd = null; }
+    renderUpdate();
+  }
+  function renderUpdate() {
+    if (!lastUpd) { updbar.classList.add("hidden"); return; }
+    document.getElementById("updText").textContent =
+      t("updAvail", { latest: lastUpd.latest, current: lastUpd.current });
+    const link = document.getElementById("updLink");
+    const ok = typeof lastUpd.url === "string" && /^https:\/\/github\.com\//.test(lastUpd.url);
+    link.classList.toggle("hidden", !ok);
+    if (ok) link.href = lastUpd.url;
+    updbar.classList.remove("hidden");
+  }
+  document.getElementById("updCopy").addEventListener("click", () => lastUpd && copyText(lastUpd.url || ""));
+  document.getElementById("updClose").addEventListener("click", () => {
+    if (lastUpd) sessionStorage.setItem("ocrUpdDismissed", lastUpd.latest);
+    lastUpd = null; renderUpdate();
+  });
   modeSel.addEventListener("change", async () => {
     try {
       const res = await fetch("/api/prefs", {
@@ -643,7 +721,8 @@
     if (replace) {
       pages = []; mergedText = ""; currentPage = 0;
       out.value = "";
-      imgbox.classList.add("hidden");
+      stage.classList.add("hidden");
+      boxesSvg.innerHTML = "";
       pagesBox.classList.add("hidden");
       placeholder.classList.remove("hidden");
       renderLines();
@@ -699,6 +778,7 @@
     fd.append("file", file);
     const scaleSel = document.getElementById("scale");
     if (scaleSel.value !== "auto") fd.append("scale", scaleSel.value);
+    fd.append("overlay", "0");  // ภาพเปล่า — หน้าเว็บวางกรอบ SVG ที่คลิกได้เอง
     return fd;
   }
 
@@ -779,13 +859,89 @@
     if (!p) return;
     if (p.image) {
       imgbox.src = "data:image/png;base64," + p.image;
-      imgbox.classList.remove("hidden");
+      stage.classList.remove("hidden");
       placeholder.classList.add("hidden");
     }
     out.value = mergedText;
+    selLine = -1;
+    drawBoxes(p);
     renderLines();
     updateExportButtons();
   }
+
+  /* ---------- กรอบบนภาพ: คลิกเพื่อเลือกบรรทัด (ภาพ ↔ ข้อความ ↔ รายบรรทัด) ---------- */
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function drawBoxes(p) {
+    boxesSvg.innerHTML = "";
+    if (!p || !p.size || !p.lines) return;
+    boxesSvg.setAttribute("viewBox", `0 0 ${p.size[0]} ${p.size[1]}`);
+    p.lines.forEach((ln, i) => {
+      const poly = document.createElementNS(SVGNS, "polygon");
+      poly.setAttribute("points", ln.box.map(c => c[0] + "," + c[1]).join(" "));
+      poly.dataset.i = i;
+      const tip = document.createElementNS(SVGNS, "title");
+      tip.textContent = Math.round((ln.confidence || 0) * 100) + "% · " + ln.text;
+      poly.appendChild(tip);
+      poly.addEventListener("click", e => { e.stopPropagation(); selectLine(i, "image"); });
+      boxesSvg.appendChild(poly);
+    });
+  }
+  boxesSvg.addEventListener("click", () => imgbox.click());
+
+  /* ตำแหน่ง [เริ่ม,จบ) ของแต่ละบรรทัดในช่องข้อความ (หาจากข้อความ ตามลำดับที่ปรากฏของหน้านั้น) */
+  function pageStart(p) {
+    const v = out.value;
+    let from = 0;
+    if (new Set(pages.map(x => x.file)).size > 1) {
+      const h = v.indexOf("=== " + p.file + " ===");
+      if (h < 0) return -1;
+      from = h;
+    }
+    if (pages.filter(x => x.file === p.file).length > 1) {
+      const m = new RegExp("^--- .+? " + p.page + " ---$", "m");
+      const hit = m.exec(v.slice(from));
+      if (!hit) return -1;
+      from += hit.index;
+    }
+    return from;
+  }
+  function lineRanges(p) {
+    let pos = pageStart(p);
+    if (pos < 0) return [];
+    const v = out.value, ranges = [];
+    for (const ln of p.lines || []) {
+      const a = ln.text ? v.indexOf(ln.text, pos) : -1;
+      if (a < 0) { ranges.push(null); continue; }
+      ranges.push([a, a + ln.text.length]);
+      pos = a + ln.text.length;
+    }
+    return ranges;
+  }
+
+  function selectLine(i, from) {
+    const p = pages[currentPage];
+    if (!p || !p.lines || !p.lines[i]) return;
+    selLine = i;
+    boxesSvg.querySelectorAll("polygon").forEach(el => el.classList.toggle("sel", +el.dataset.i === i));
+    linesBox.querySelectorAll(".ln").forEach(el => el.classList.toggle("sel", +el.dataset.li === i));
+    const sel = linesBox.querySelector(`.ln[data-li="${i}"]`);
+    if (sel && from !== "lines") sel.scrollIntoView({ block: "nearest" });
+    if (from === "text") return;
+    const r = lineRanges(p)[i];
+    if (!r) return;
+    out.focus({ preventScroll: true });
+    out.setSelectionRange(r[0], r[1]);
+    const lh = parseFloat(getComputedStyle(out).lineHeight) || 24;
+    const row = out.value.slice(0, r[0]).split("\n").length - 1;
+    out.scrollTop = Math.max(0, row * lh - out.clientHeight / 2);
+  }
+  out.addEventListener("click", () => {
+    const p = pages[currentPage];
+    if (!p || !p.lines) return;
+    const caret = out.selectionStart;
+    const idx = lineRanges(p).findIndex(r => r && caret >= r[0] && caret <= r[1]);
+    if (idx >= 0) selectLine(idx, "text");
+  });
 
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
@@ -825,12 +981,14 @@
       `<div class="lnhead"><span>${t("linesHead", { n: list.length })}</span>` +
       `<button id="copyAllLines">${t("copyAllLines")}</button></div>` +
       list.map((ln, i) =>
-        `<div class="ln"><button data-i="${i}">${t("copy")}</button>` +
+        `<div class="ln${i === selLine ? " sel" : ""}" data-li="${i}"><button data-i="${i}">${t("copy")}</button>` +
         `<span class="txt">${escapeHtml(ln.text)}</span>` +
         `<span class="cf">${Math.round((ln.confidence || 0) * 100)}%</span></div>`
       ).join("");
     linesBox.querySelectorAll("[data-i]").forEach(b =>
-      b.addEventListener("click", () => copyText(list[+b.dataset.i].text)));
+      b.addEventListener("click", e => { e.stopPropagation(); copyText(list[+b.dataset.i].text); }));
+    linesBox.querySelectorAll(".ln").forEach(el =>
+      el.addEventListener("click", () => selectLine(+el.dataset.li, "lines")));
     const all = document.getElementById("copyAllLines");
     if (all) all.addEventListener("click", () => copyText(list.map(l => l.text).join("\n")));
   }
@@ -869,13 +1027,37 @@
     download(new Blob([out.value], { type: "text/plain;charset=utf-8" }), base + ".txt");
   });
 
+  /* ข้อความที่ผู้ใช้แก้ในช่องผลลัพธ์ → ส่งให้เซิร์ฟเวอร์ใช้ตอนส่งออก
+     คืน null = ไม่ได้แก้ (ใช้ผลเดิม) · หลายไฟล์: ตัดเฉพาะส่วนของไฟล์นี้ตามหัว "=== ชื่อ ===" */
+  function editedTextFor(p) {
+    if (out.value === mergedText) return null;
+    const names = new Set(pages.map(x => x.file));
+    if (names.size <= 1) return out.value;
+    const lines = out.value.replace(/\r\n?/g, "\n").split("\n");
+    const head = "=== " + p.file + " ===";
+    const start = lines.findIndex(l => l.trim() === head);
+    if (start < 0) { toast(t("editNoSection"), true); return null; }
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i++) {
+      if (/^===.*===$/.test(lines[i].trim())) { end = i; break; }
+    }
+    return lines.slice(start + 1, end).join("\n");
+  }
+
   async function exportAs(fmt, btn) {
     const p = pages[currentPage];
     if (!p || !p.result_id) { toast(t("needResult"), true); return; }
     if (btn) btn.disabled = true;
     setStatus(t("exporting", { fmt }));
     try {
-      const res = await api(`/api/result/${p.result_id}/export?format=${fmt}`);
+      const edited = editedTextFor(p);
+      const res = edited === null
+        ? await api(`/api/result/${p.result_id}/export?format=${fmt}`)
+        : await api(`/api/result/${p.result_id}/export?format=${fmt}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: edited }),
+          });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         toast((data.error || t("statusError")) + " (" + fmt + ")", true);
