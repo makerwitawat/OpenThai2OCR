@@ -1,16 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec: OpenThai2.0-OCR Web UI — ONE FILE (models embedded)."""
+import sys
+
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = [
     "models.runtime.line_engine",
     "models.runtime.thai_norm",
-    "webview",
-    "webview.platforms.edgechromium",
-    "webview.platforms.winforms",
-    "clr",
-    "clr_loader",
 ] + collect_submodules("waitress")
+
+if sys.platform == "win32":
+    # native app window (--window) on Windows: WebView2 via pythonnet
+    hiddenimports += [
+        "webview",
+        "webview.platforms.edgechromium",
+        "webview.platforms.winforms",
+        "clr",
+        "clr_loader",
+    ]
 
 a = Analysis(
     ["app.py"],
