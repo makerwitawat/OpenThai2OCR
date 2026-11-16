@@ -89,6 +89,27 @@ def test_existing_prefs_are_preserved(client, tmp_path):
     assert saved == {"start_mode": "none", "update_check": False, "port": 6400}
 
 
+def test_save_does_not_overwrite_other_settings_file(client, tmp_path):
+    """บั๊กเดิม: ไฟล์ข้าง exe กับ %LOCALAPPDATA% ค่าไม่ตรงกัน → บันทึกแล้ว start_mode ของอีกไฟล์หาย"""
+    primary, fallback = tmp_path / "settings.json", tmp_path / "fallback.json"
+    primary.write_text(json.dumps({"open_browser": False}), encoding="utf-8")
+    fallback.write_text(json.dumps({"start_mode": "window"}), encoding="utf-8")
+    _post(client, {"values": {"port": 6500}})
+    assert json.loads(fallback.read_text(encoding="utf-8")) == {"start_mode": "window", "port": 6500}
+    assert json.loads(primary.read_text(encoding="utf-8")) == {"open_browser": False, "port": 6500}
+    client.post("/api/prefs", json={"update_check": False})
+    assert json.loads(fallback.read_text(encoding="utf-8"))["start_mode"] == "window"
+
+
+def test_load_prefs_merges_both_files(client, tmp_path):
+    """ไฟล์ข้างโปรแกรมมีแค่ update_check ต้องไม่บัง start_mode ของไฟล์ LOCALAPPDATA"""
+    (tmp_path / "settings.json").write_text(json.dumps({"update_check": True, "port": 6000}), encoding="utf-8")
+    (tmp_path / "fallback.json").write_text(json.dumps({"start_mode": "window", "port": 5999}), encoding="utf-8")
+    prefs = web.load_prefs()
+    assert prefs == {"start_mode": "window", "update_check": True, "port": 6000}  # ไฟล์ข้างโปรแกรมชนะ key ซ้ำ
+    assert web.prefs_start_mode() == "window"
+
+
 def test_empty_request_rejected(client):
     assert _post(client, {}).status_code == 400
     assert _post(client, {"values": []}).status_code == 400

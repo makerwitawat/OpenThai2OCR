@@ -85,31 +85,39 @@ def _settings_file(writable: bool = False) -> Path:
     return SETTINGS_FILE if os.access(BASE, os.W_OK) else FALLBACK_SETTINGS
 
 
+def _read_prefs_file(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 def load_prefs() -> dict:
-    for path in (SETTINGS_FILE, FALLBACK_SETTINGS):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return data if isinstance(data, dict) else {}
-        except (OSError, ValueError):
-            continue
-    return {}
+    """รวมสองไฟล์: %LOCALAPPDATA% เป็นฐาน แล้วไฟล์ข้างโปรแกรมทับเฉพาะ key ที่มี
+    (เดิมอ่านแค่ไฟล์แรกที่เจอ → ไฟล์ที่มี key น้อยกว่าบังค่าอีกไฟล์)"""
+    data = _read_prefs_file(FALLBACK_SETTINGS)
+    data.update(_read_prefs_file(SETTINGS_FILE))
+    return data
 
 
 def save_prefs(updates: dict, remove: tuple | list = ()) -> dict:
-    data = load_prefs()
-    data.update(updates)
-    for key in remove:
-        data.pop(key, None)
+    """เขียนเฉพาะ key ที่เปลี่ยนลงทั้งสองไฟล์ โดย **รวมกับเนื้อหาเดิมของไฟล์นั้น ๆ**
+    (เดิมเอาเนื้อหาไฟล์แรกไปเขียนทับอีกไฟล์ → ค่าที่ตั้งไว้ในอีกไฟล์หาย เช่น start_mode)"""
     targets = [FALLBACK_SETTINGS]
     if SETTINGS_FILE not in targets:
         targets.append(SETTINGS_FILE)
     for path in targets:
+        data = _read_prefs_file(path)
+        data.update(updates)
+        for key in remove:
+            data.pop(key, None)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         except OSError:
             log.warning("cannot write settings: %s", path)
-    return data
+    return load_prefs()
 
 
 def prefs_start_mode() -> str:
