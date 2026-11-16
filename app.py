@@ -28,7 +28,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_file
 
 APP_NAME = "openthai2ocr"
-APP_VERSION = "1.3.2"
+APP_VERSION = "1.4.0"
 
 BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 BUNDLE = Path(getattr(sys, "_MEIPASS", BASE)) if getattr(sys, "frozen", False) else BASE

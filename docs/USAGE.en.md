@@ -44,7 +44,9 @@ python app.py --watch "D:\inbox" --watch-interval 3       # poll every 3s (defau
 ## 3. Read the result
 
 - OCR starts automatically as soon as a file arrives
-- Left = the image with line boxes and confidence scores (top-left of each box)
+- Left = the image with green boxes over each recognised line — **click a box** to select that line
+  (its text is highlighted on the right); clicking in the text or in the Lines list selects the box too ·
+  hover a box to see its confidence · click outside the boxes for the full-screen view
 - Right = the text in reading order (2–3 column pages supported)
 - Multiple files/pages → tabs below the image
 - Buttons: **Copy** / **.txt** / **.docx** / **.pdf** / **.csv** / **.json**
@@ -52,6 +54,10 @@ python app.py --watch "D:\inbox" --watch-interval 3       # poll every 3s (defau
   - `.docx` = Word document, one paragraph per line, editable
   - `.csv` = lines with confidence and box coordinates (opens in Excel)
   - `.json` = full result for downstream use
+- **You can edit the text on the right** — `.txt` `.docx` `.pdf` `.csv` `.json` then export your edited text
+  (several files: keep the `=== file name ===` headers · PDF/CSV keep the original boxes when the line count is unchanged)
+- **Automatic update check** — when the page opens, the app asks GitHub whether a newer version exists
+  (no files or data are sent). A banner appears if so; turn it off with the "Check for updates" box in the options bar.
 - **Lines** button — expands every line of the current page with its confidence;
   copy a single line, or **Copy all lines** for the whole page
 - Multi-page PDFs: a progress bar ("Page x/y") and a **Cancel** button while reading

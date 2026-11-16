@@ -66,6 +66,7 @@ curl -X POST http://127.0.0.1:5000/api/prefs \
 |---|---|---|
 | `start_mode` | string | `window` (app window) · `browser` · `none` — applies on the next start |
 | `open_browser` | bool | Legacy: `true` = `browser`, `false` = `none` |
+| `update_check` | bool | Turn the GitHub new-version check on/off (default `true`) — can be sent without `start_mode` |
 
 ### `POST /api/ocr` — file upload (multipart, field name `file`)
 
@@ -91,6 +92,7 @@ curl -F "file=@page.png" -F "scale=2" "http://127.0.0.1:5000/api/ocr?images=0"
 | `image_base64` | string | data URL or bare base64 (`file_base64` also accepted) |
 | `filename` | string | used to infer the extension when no data URL |
 | `images` | bool | `false` = omit annotated images (smaller response), default `true` |
+| `overlay` | bool | `false` = return a plain image without baked-in boxes/confidence (draw your own from `lines[].box` + `size`), default `true` |
 | `scale` | number \| `"auto"` | upscale before OCR: `auto` (default), `1`, `1.5`, `2` … max 4 |
 | `settings` | object | engine overrides, see the table below |
 
@@ -123,6 +125,7 @@ For multipart, send `images=0`, `scale=2`, `settings={"rec":{...}}` as form fiel
 ```
 
 - `lines[].box` coordinates are in the processed image (after `scale`)
+- `size` = `[width, height]` of the processed image (use it as the viewBox when drawing boxes over the image)
 - `rotation` = 0/90/180/270 (auto page rotation)
 - `timing.det_ms` / `rec_ms` = detection / recognition milliseconds
 
@@ -180,6 +183,34 @@ Downloads the result (the last 5 results are kept).
 ```bash
 curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
 ```
+
+#### Export with edited text — `POST /api/result/<result_id>/export?format=...`
+
+Send JSON `{"text": "..."}` so the exported file uses your corrected text instead of the raw OCR output
+(no `text`, or `GET` = the original result · the result stored on the server is never modified)
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"text": "corrected line\nanother line"}' \
+  -o fixed.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
+```
+
+- `=== file name ===` and `--- Page N ---` header lines are stripped automatically; use `--- Page N ---` to separate pages of a multi-page PDF
+- `txt`/`json` use the text as sent · `docx` gets one paragraph per line
+- `pdf`/`csv`: if the line count equals the original row count, each line is placed on its row's box; otherwise lines are spread vertically inside the original text area
+- `text` is limited to 2,000,000 characters (more = `413`) · a non-string value = `400`
+
+### `GET /api/update-check`
+
+Asks the server to look up the latest version on GitHub Releases (cached 6 h, 5 s timeout, offline = no error).
+Add `?force=1` to bypass the cache.
+
+```json
+{"ok": true, "enabled": true, "current": "1.4.0", "latest": "1.4.0",
+ "update_available": false, "url": "https://github.com/makerwitawat/OpenThai2OCR/releases/tag/v1.4.0",
+ "error": null}
+```
+
+Turn it off with `POST /api/prefs {"update_check": false}` — the check only talks to GitHub; none of your files or text are sent.
 
 ### `POST /api/shutdown`
 

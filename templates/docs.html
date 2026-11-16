@@ -129,8 +129,10 @@
         <td data-th="ความคืบหน้า/ผลลัพธ์ของงาน" data-en="Job progress / result">ความคืบหน้า/ผลลัพธ์ของงาน</td></tr>
     <tr><td><span class="pill post">POST</span><code>/api/jobs/&lt;id&gt;/cancel</code></td>
         <td data-th="ยกเลิกงาน" data-en="Cancel a job">ยกเลิกงาน</td></tr>
-    <tr><td><span class="pill get">GET</span><code>/api/result/&lt;id&gt;/export</code></td>
-        <td data-th="ส่งออกผลลัพธ์: <code>format=pdf|csv|json|txt|docx</code>" data-en="Export a result: <code>format=pdf|csv|json|txt|docx</code>">ส่งออกผลลัพธ์: <code>format=pdf|csv|json|txt|docx</code></td></tr>
+    <tr><td><span class="pill get">GET</span><span class="pill post">POST</span><code>/api/result/&lt;id&gt;/export</code></td>
+        <td data-th="ส่งออกผลลัพธ์: <code>format=pdf|csv|json|txt|docx</code> · POST พร้อม JSON <code>{&quot;text&quot;:&quot;...&quot;}</code> = ส่งออกด้วยข้อความที่แก้แล้ว" data-en="Export a result: <code>format=pdf|csv|json|txt|docx</code> · POST with JSON <code>{&quot;text&quot;:&quot;...&quot;}</code> = export your edited text">ส่งออกผลลัพธ์: <code>format=pdf|csv|json|txt|docx</code> · POST พร้อม JSON <code>{"text":"..."}</code> = ส่งออกด้วยข้อความที่แก้แล้ว</td></tr>
+    <tr><td><span class="pill get">GET</span><code>/api/update-check</code></td>
+        <td data-th="ตรวจเวอร์ชันใหม่จาก GitHub (cache 6 ชม. · ปิดได้ด้วย prefs <code>update_check</code>)" data-en="Look for a newer version on GitHub (cached 6 h · disable via prefs <code>update_check</code>)">ตรวจเวอร์ชันใหม่จาก GitHub (cache 6 ชม. · ปิดได้ด้วย prefs <code>update_check</code>)</td></tr>
     <tr><td><span class="pill get">GET</span><span class="pill post">POST</span><code>/api/prefs</code></td>
         <td data-th="อ่าน/บันทึกค่าตั้งเช่น <code>open_browser</code>" data-en="Read/save prefs such as <code>open_browser</code>">อ่าน/บันทึกค่าตั้งเช่น <code>open_browser</code></td></tr>
     <tr><td><span class="pill post">POST</span><code>/api/shutdown</code></td>
@@ -242,6 +244,7 @@ Console.WriteLine(json["pages"]?[0]?["text"]);</code></pre>
     <tr><td><code>pages[].text</code></td><td data-th="ข้อความของหน้านั้น" data-en="Text of that page">ข้อความของหน้านั้น</td></tr>
     <tr><td><code>pages[].lines[]</code></td><td data-th="แต่ละบรรทัด: ข้อความ, ความมั่นใจ, พิกัดสี่มุม, คำย่อย" data-en="Per line: text, confidence, 4-corner box, words">แต่ละบรรทัด: ข้อความ, ความมั่นใจ, พิกัดสี่มุม, คำย่อย</td></tr>
     <tr><td><code>pages[].scale</code></td><td data-th="อัตราขยายภาพที่ใช้จริง (พิกัดอ้างอิงภาพหลังขยาย)" data-en="Scale actually applied (boxes are in the scaled image)">อัตราขยายภาพที่ใช้จริง (พิกัดอ้างอิงภาพหลังขยาย)</td></tr>
+    <tr><td><code>pages[].size</code></td><td data-th="<code>[กว้าง, สูง]</code> ของภาพที่ประมวลผล — ใช้เป็น viewBox เมื่อวาดกรอบทับภาพ" data-en="<code>[width, height]</code> of the processed image — use as the viewBox when drawing boxes over it">[กว้าง, สูง] ของภาพที่ประมวลผล — ใช้เป็น viewBox เมื่อวาดกรอบทับภาพ</td></tr>
     <tr><td><code>result_id</code></td><td data-th="ใช้เรียก export ได้ (เก็บผลไว้ 5 ล่าสุด)" data-en="Use it to export (last 5 results are kept)">ใช้เรียก export ได้ (เก็บผลไว้ 5 ล่าสุด)</td></tr>
   </table>
 
@@ -252,6 +255,7 @@ Console.WriteLine(json["pages"]?[0]?["text"]);</code></pre>
     <tr><td><code>image_base64</code></td><td data-th="ส่งเป็น JSON แทนไฟล์ได้ (รองรับ data:URL)" data-en="Send JSON instead of a file (data: URLs supported)">ส่งเป็น JSON แทนไฟล์ได้ (รองรับ data:URL)</td></tr>
     <tr><td><code>scale</code></td><td data-th="<code>auto</code> (แนะนำ) · <code>1</code> · <code>1.5</code> · <code>2</code>" data-en="<code>auto</code> (recommended) · <code>1</code> · <code>1.5</code> · <code>2</code>"><code>auto</code> (แนะนำ) · <code>1</code> · <code>1.5</code> · <code>2</code></td></tr>
     <tr><td><code>images</code></td><td data-th="<code>0</code> = ไม่ส่งภาพผลลัพธ์กลับ (เร็ว/ประหยัดแบนด์วิดท์)" data-en="<code>0</code> = don't return the annotated image (faster, smaller)"><code>0</code> = ไม่ส่งภาพผลลัพธ์กลับ (เร็ว/ประหยัดแบนด์วิดท์)</td></tr>
+    <tr><td><code>overlay</code></td><td data-th="<code>0</code> = ภาพผลลัพธ์เป็นภาพเปล่า ไม่ฝังกรอบ (วาดเองจาก <code>lines[].box</code> + <code>size</code>)" data-en="<code>0</code> = plain result image without baked-in boxes (draw your own from <code>lines[].box</code> + <code>size</code>)"><code>0</code> = ภาพผลลัพธ์เป็นภาพเปล่า ไม่ฝังกรอบ (วาดเองจาก <code>lines[].box</code> + <code>size</code>)</td></tr>
     <tr><td><code>settings</code></td><td data-th="JSON ปรับละเอียด เช่น <code>{&quot;rec&quot;:{&quot;drop_below&quot;:0.85}}</code> (ดูตารางถัดไป)" data-en="Fine-tuning JSON, e.g. <code>{&quot;rec&quot;:{&quot;drop_below&quot;:0.85}}</code> (see the next table)">JSON ปรับละเอียด เช่น <code>{"rec":{"drop_below":0.85}}</code></td></tr>
   </table>
 

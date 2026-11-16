@@ -66,6 +66,7 @@ curl -X POST http://127.0.0.1:5000/api/prefs \
 |---|---|---|
 | `start_mode` | string | `window` (หน้าต่างโปรแกรม) · `browser` (เบราว์เซอร์) · `none` (ไม่เปิดอะไร) — มีผลครั้งถัดไป |
 | `open_browser` | bool | แบบเก่า: `true` = `browser`, `false` = `none` |
+| `update_check` | bool | เปิด/ปิดการตรวจเวอร์ชันใหม่จาก GitHub (ค่าเริ่มต้น `true`) — ส่งได้โดยไม่ต้องส่ง `start_mode` |
 
 ### `POST /api/ocr` — แนบไฟล์ (multipart, ชื่อ field = `file`)
 
@@ -91,6 +92,7 @@ curl -F "file=@page.png" -F "scale=2" "http://127.0.0.1:5000/api/ocr?images=0"
 | `image_base64` | string | รับทั้ง data URL และ base64 ล้วน (หรือใช้ `file_base64` ก็ได้) |
 | `filename` | string | ใช้เดานามสกุลเมื่อไม่ได้ส่ง data URL |
 | `images` | bool | `false` = ไม่คืนภาพผลลัพธ์ (เบากว่า) ค่าเริ่มต้น `true` |
+| `overlay` | bool | `false` = ภาพผลลัพธ์เป็นภาพเปล่า ไม่ฝังกรอบ/ค่าความมั่นใจ (ให้วาดกรอบเองจาก `lines[].box` + `size`) ค่าเริ่มต้น `true` |
 | `scale` | number \| `"auto"` | ขยายภาพก่อนอ่าน: `auto` (ค่าเริ่มต้น), `1`, `1.5`, `2`… สูงสุด 4 |
 | `settings` | object | ค่าปรับ engine ดูตารางด้านล่าง |
 
@@ -123,6 +125,7 @@ multipart ใส่ `images=0`, `scale=2`, `settings={"rec":{...}}` เป็น
 ```
 
 - `lines[].box` เป็นพิกัดในภาพที่ประมวลผล (หลังขยายตาม `scale` แล้ว)
+- `size` = `[กว้าง, สูง]` ของภาพที่ประมวลผล (ใช้เป็น viewBox เมื่อวาดกรอบทับภาพ)
 - `rotation` = 0/90/180/270 (องศาที่ระบบหมุนหน้าอัตโนมัติ)
 - `timing.det_ms` / `rec_ms` = เวลาตรวจจับ/อ่าน (มิลลิวินาที)
 
@@ -180,6 +183,34 @@ multipart ใส่ `images=0`, `scale=2`, `settings={"rec":{...}}` เป็น
 ```bash
 curl -o result.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
 ```
+
+#### ส่งออกด้วยข้อความที่แก้แล้ว — `POST /api/result/<result_id>/export?format=...`
+
+ส่ง JSON `{"text": "..."}` เพื่อให้ไฟล์ที่ส่งออกใช้ข้อความที่แก้ไขแล้วแทนผลดิบ
+(ไม่ส่ง `text` หรือใช้ `GET` = ผลเดิม · ผลที่เก็บไว้ในเซิร์ฟเวอร์ไม่ถูกแก้)
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"text": "บรรทัดที่แก้แล้ว\nอีกบรรทัด"}' \
+  -o fixed.pdf "http://127.0.0.1:5000/api/result/<id>/export?format=pdf"
+```
+
+- หัวบรรทัด `=== ชื่อไฟล์ ===` และ `--- หน้า N ---` ถูกตัดทิ้งอัตโนมัติ; ใช้ `--- หน้า N ---` แยกหน้าเมื่อ PDF มีหลายหน้า
+- `txt`/`json` ใช้ข้อความตามที่ส่ง · `docx` ได้ 1 ย่อหน้าต่อบรรทัด
+- `pdf`/`csv`: ถ้าจำนวนบรรทัดเท่ากับจำนวนแถวเดิม จะวางตามกรอบของแถวนั้น ๆ ถ้าไม่เท่ากันจะกระจายบรรทัดในแนวตั้งภายในกรอบข้อความเดิม
+- `text` ใหญ่สุด 2,000,000 ตัวอักษร (เกิน = `413`) · ชนิดไม่ใช่ข้อความ = `400`
+
+### `GET /api/update-check`
+
+ถามเซิร์ฟเวอร์ให้ตรวจเวอร์ชันล่าสุดจาก GitHub Releases (cache 6 ชม., timeout 5 วิ, ออฟไลน์ = ไม่ error)
+เพิ่ม `?force=1` เพื่อข้าม cache
+
+```json
+{"ok": true, "enabled": true, "current": "1.4.0", "latest": "1.4.0",
+ "update_available": false, "url": "https://github.com/makerwitawat/OpenThai2OCR/releases/tag/v1.4.0",
+ "error": null}
+```
+
+ปิดได้ด้วย `POST /api/prefs {"update_check": false}` — ตรวจนี้ติดต่อ GitHub เท่านั้น ไม่ส่งไฟล์หรือข้อความของผู้ใช้
 
 ### `POST /api/shutdown`
 

@@ -39,6 +39,20 @@ a = Analysis(
     excludes=["openvino", "IPython", "matplotlib", "pandas", "scipy", "torch", "torchvision", "torchaudio", "llvmlite", "numba", "sklearn", "sympy", "transformers", "tensorflow", "jax", "paddle", "paddleocr", "notebook", "ipykernel"],
     noarchive=False,
 )
+# ตัดไฟล์ที่ไม่ได้ใช้ออกจาก exe (วัดแล้วกินพื้นที่ ~50 MB บีบอัด):
+# - pymupdf\layout\resources\onnx : โมเดลวิเคราะห์เลย์เอาต์ของ pymupdf4llm — แอปนี้ใช้ pymupdf แค่เรนเดอร์/สร้าง PDF
+# - pymupdf\mupdf-devel          : ไฟล์ .lib/.h สำหรับคอมไพล์ ไม่ใช้ตอนรัน
+# - opencv_videoio_ffmpeg*       : ตัวถอดรหัสวิดีโอ — แอปนี้อ่านแค่ภาพนิ่ง
+_DROP = ("pymupdf/layout/resources/onnx", "pymupdf/mupdf-devel", "opencv_videoio_ffmpeg")
+
+
+def _keep(entry):
+    return not any(s in str(entry[0]).replace("\\", "/") for s in _DROP)
+
+
+a.binaries = [e for e in a.binaries if _keep(e)]
+a.datas = [e for e in a.datas if _keep(e)]
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
