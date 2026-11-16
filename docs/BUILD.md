@@ -1,5 +1,7 @@
 # Build & Release — OpenThai2.0 OCR
 
+**ไทย** | [English](BUILD.en.md)
+
 ## build ในเครื่อง (Windows)
 
 ```bat

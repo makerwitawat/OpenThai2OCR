@@ -1,0 +1,271 @@
+# API — OpenThai2.0 OCR
+
+[ไทย](API.md) | **English**
+
+Call it from any language over HTTP JSON (PHP, Python, Node.js, C#, Java, Go, Ruby, PowerShell …).
+CORS is open for every origin.
+
+## Start the server
+
+| Mode | Command |
+|---|---|
+| exe | double-click `OpenThai2OCR.exe` (or `OpenThai2OCR.exe --port 5000`) |
+| python | `python app.py` |
+| LAN access | add `--host 0.0.0.0`, e.g. `python app.py --host 0.0.0.0 --port 5000` |
+
+It listens on `127.0.0.1:5000` by default (this machine only).
+
+## Endpoints
+
+### `GET /api/health`
+
+```json
+{"ok": true, "model_dir": "D:\\...\\models", "model_ready": true}
+```
+
+### `POST /api/ocr` — file upload (multipart, field name `file`)
+
+```bash
+curl -F "file=@page.png" "http://127.0.0.1:5000/api/ocr"
+curl -F "file=@page.png" -F "scale=2" "http://127.0.0.1:5000/api/ocr?images=0"
+```
+
+### `POST /api/ocr` — JSON base64
+
+```json
+{
+  "image_base64": "data:image/png;base64,iVBORw0KGgo...",
+  "filename": "page.png",
+  "images": false,
+  "scale": "auto",
+  "settings": {"rec": {"drop_below": 0.85}, "det": {"limit": 1600}}
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `image_base64` | string | data URL or bare base64 (`file_base64` also accepted) |
+| `filename` | string | used to infer the extension when no data URL |
+| `images` | bool | `false` = omit annotated images (smaller response), default `true` |
+| `scale` | number \| `"auto"` | upscale before OCR: `auto` (default), `1`, `1.5`, `2` … max 4 |
+| `settings` | object | engine overrides, see the table below |
+
+For multipart, send `images=0`, `scale=2`, `settings={"rec":{...}}` as form fields instead.
+
+### Response
+
+```json
+{
+  "ok": true,
+  "text": "--- page 1 ---\nthe whole page text...",
+  "pages": [
+    {
+      "page": 1,
+      "text": "the whole page text...",
+      "n_lines": 12,
+      "scale": 1.0,
+      "rotation": 0,
+      "text_angle": 0.0,
+      "timing": {"det_ms": 76.2, "rec_ms": 15.4, "n_lines": 12},
+      "lines": [
+        {"text": "line one", "confidence": 0.986, "row": 0,
+         "box": [[10.0, 20.0], [300.0, 20.0], [300.0, 60.0], [10.0, 60.0]],
+         "words": [{"text": "line", "confidence": 0.99, "box": [[0,0],[0,0],[0,0],[0,0]]}]}
+      ],
+      "image": "<base64 PNG with boxes drawn>"
+    }
+  ]
+}
+```
+
+- `lines[].box` coordinates are in the processed image (after `scale`)
+- `rotation` = 0/90/180/270 (auto page rotation)
+- `timing.det_ms` / `rec_ms` = detection / recognition milliseconds
+
+### `settings` keys
+
+| Key | Meaning | Range |
+|---|---|---|
+| `det.limit` | longest side fed to the detector | 320–4096 |
+| `det.v_pad` | grow box height (Thai marks) | 0–1 |
+| `det.split_gap` | split lines merged across a gutter | 0–4 |
+| `det.box_thresh` | minimum box confidence | 0.1–0.99 |
+| `rec.drop_below` | drop lines under this confidence | 0–1 |
+| `rec.min_chars` | drop too-short lines | 0–50 |
+| `rec.junk_below`, `rec.junk_invalid` | drop junk / badly spelled lines | 0–1 |
+| `rec.batch` | lines per forward pass | 1–64 |
+| `rec.color` | `flatten` (default), `gray`, `gray_inv`, `stretch`, `bgr` | — |
+
+## PHP
+
+```php
+<?php
+// 1) multipart upload
+$ch = curl_init('http://127.0.0.1:5000/api/ocr');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => ['file' => new CURLFile('C:/scan/page.jpg')],
+    CURLOPT_TIMEOUT        => 120,
+]);
+$res = json_decode(curl_exec($ch), true);
+if (!empty($res['ok'])) {
+    echo $res['text'];
+} else {
+    http_response_code(500);
+    echo 'error: ' . ($res['error'] ?? 'unknown');
+}
+
+// 2) base64 JSON (from an upload or a canvas)
+$b64 = base64_encode(file_get_contents('C:/scan/page.jpg'));
+$payload = json_encode(['image_base64' => $b64, 'filename' => 'page.jpg', 'images' => false]);
+$ch = curl_init('http://127.0.0.1:5000/api/ocr');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => $payload,
+    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+    CURLOPT_TIMEOUT        => 120,
+]);
+$res = json_decode(curl_exec($ch), true);
+echo $res['text'] ?? $res['error'];
+```
+
+## Python
+
+```python
+import base64, json, urllib.request
+
+data = base64.b64encode(open("page.png", "rb").read()).decode()
+body = json.dumps({"image_base64": data, "images": False, "scale": 2}).encode()
+req = urllib.request.Request("http://127.0.0.1:5000/api/ocr", data=body,
+                             headers={"Content-Type": "application/json"})
+out = json.loads(urllib.request.urlopen(req).read())
+print(out["text"])
+
+# or with requests:
+# r = requests.post("http://127.0.0.1:5000/api/ocr", files={"file": open("page.png", "rb")},
+#                   data={"scale": "2", "images": "0"})
+# print(r.json()["text"])
+```
+
+## Node.js (18+)
+
+```js
+import { readFile } from "node:fs/promises";
+
+const form = new FormData();
+form.append("file", new Blob([await readFile("page.png")]), "page.png");
+form.append("scale", "2");
+form.append("images", "0");
+
+const r = await fetch("http://127.0.0.1:5000/api/ocr", { method: "POST", body: form });
+const j = await r.json();
+console.log(j.ok ? j.text : j.error);
+```
+
+## C# (.NET)
+
+```csharp
+using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+using var form = new MultipartFormDataContent();
+form.Add(new ByteArrayContent(await File.ReadAllBytesAsync("page.png")), "file", "page.png");
+form.Add(new StringContent("2"), "scale");
+form.Add(new StringContent("0"), "images");
+var res = await http.PostAsync("http://127.0.0.1:5000/api/ocr", form);
+var json = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+Console.WriteLine(json.RootElement.GetProperty("text").GetString());
+```
+
+## Java 11+
+
+```java
+import java.net.URI;
+import java.net.http.*;
+import java.nio.file.*;
+import java.util.Base64;
+
+String b64 = Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of("page.png")));
+String body = "{\"image_base64\":\"" + b64 + "\",\"filename\":\"page.png\",\"images\":false}";
+HttpRequest req = HttpRequest.newBuilder(URI.create("http://127.0.0.1:5000/api/ocr"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .timeout(java.time.Duration.ofMinutes(2))
+    .build();
+HttpResponse<String> res = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());
+```
+
+## Go
+
+```go
+package main
+
+import (
+    "bytes"
+    "fmt"
+    "io"
+    "mime/multipart"
+    "net/http"
+    "os"
+)
+
+func main() {
+    var buf bytes.Buffer
+    w := multipart.NewWriter(&buf)
+    f, _ := os.Open("page.png")
+    defer f.Close()
+    part, _ := w.CreateFormFile("file", "page.png")
+    io.Copy(part, f)
+    w.WriteField("images", "0")
+    w.WriteField("scale", "2")
+    w.Close()
+
+    req, _ := http.NewRequest("POST", "http://127.0.0.1:5000/api/ocr", &buf)
+    req.Header.Set("Content-Type", w.FormDataContentType())
+    res, err := http.DefaultClient.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer res.Body.Close()
+    out, _ := io.ReadAll(res.Body)
+    fmt.Println(string(out))
+}
+```
+
+## Ruby
+
+```ruby
+require "net/http"
+require "json"
+require "base64"
+
+b64 = Base64.strict_encode64(File.binread("page.png"))
+uri = URI("http://127.0.0.1:5000/api/ocr")
+req = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
+req.body = { image_base64: b64, filename: "page.png", images: false }.to_json
+res = Net::HTTP.start(uri.hostname, uri.port, read_timeout: 120) { |h| h.request(req) }
+puts JSON.parse(res.body)["text"]
+```
+
+## PowerShell
+
+```powershell
+# PowerShell 7+
+$j = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/ocr" -Method Post -Form @{
+    file   = Get-Item "page.png"
+    scale  = "2"
+    images = "0"
+}
+$j.text
+```
+
+> PowerShell 5.1 has no `-Form`; use `curl.exe -F "file=@page.png" ...` instead.
+
+## Notes
+
+- A PDF is rendered page by page; results are split by `pages[].page`
+- Accepted extensions: png, jpg/jpeg, bmp, tif/tiff, webp, pdf
+- With `--host 0.0.0.0` other machines can use `http://<this-machine-ip>:5000` — never expose it to
+  the internet without authentication and a firewall
+- Requests are processed one at a time (internal lock); concurrent calls queue automatically

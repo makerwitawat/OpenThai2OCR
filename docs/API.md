@@ -1,6 +1,8 @@
 # API — OpenThai2.0 OCR
 
-เรียกใช้จากโปรแกรมอื่นได้ผ่าน HTTP JSON ทุกภาษา (PHP, Python, Node.js, C#, Java ฯลฯ)
+**ไทย** | [English](API.en.md)
+
+เรียกใช้จากโปรแกรมอื่นได้ผ่าน HTTP JSON ทุกภาษา (PHP, Python, Node.js, C#, Java, Go, Ruby, PowerShell ฯลฯ)
 เปิด CORS ให้ทุก origin แล้ว
 
 ## เปิดเซิร์ฟเวอร์
@@ -160,9 +162,96 @@ console.log(j.ok ? j.text : j.error);
 using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
 using var form = new MultipartFormDataContent();
 form.Add(new ByteArrayContent(File.ReadAllBytes("page.png")), "file", "page.png");
+form.Add(new StringContent("2"), "scale");
+form.Add(new StringContent("0"), "images");
 var msg = await http.PostAsync("http://127.0.0.1:5000/api/ocr", form);
 var json = await msg.Content.ReadAsStringAsync();
 ```
+
+## ตัวอย่าง Java 11+
+
+```java
+import java.net.URI;
+import java.net.http.*;
+import java.nio.file.*;
+import java.util.Base64;
+
+String b64 = Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of("page.png")));
+String body = "{\"image_base64\":\"" + b64 + "\",\"filename\":\"page.png\",\"images\":false}";
+HttpRequest req = HttpRequest.newBuilder(URI.create("http://127.0.0.1:5000/api/ocr"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(body))
+    .timeout(java.time.Duration.ofMinutes(2))
+    .build();
+HttpResponse<String> res = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());
+```
+
+## ตัวอย่าง Go
+
+```go
+package main
+
+import (
+    "bytes"
+    "fmt"
+    "io"
+    "mime/multipart"
+    "net/http"
+    "os"
+)
+
+func main() {
+    var buf bytes.Buffer
+    w := multipart.NewWriter(&buf)
+    f, _ := os.Open("page.png")
+    defer f.Close()
+    part, _ := w.CreateFormFile("file", "page.png")
+    io.Copy(part, f)
+    w.WriteField("images", "0")
+    w.WriteField("scale", "2")
+    w.Close()
+
+    req, _ := http.NewRequest("POST", "http://127.0.0.1:5000/api/ocr", &buf)
+    req.Header.Set("Content-Type", w.FormDataContentType())
+    res, err := http.DefaultClient.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer res.Body.Close()
+    out, _ := io.ReadAll(res.Body)
+    fmt.Println(string(out))
+}
+```
+
+## ตัวอย่าง Ruby
+
+```ruby
+require "net/http"
+require "json"
+require "base64"
+
+b64 = Base64.strict_encode64(File.binread("page.png"))
+uri = URI("http://127.0.0.1:5000/api/ocr")
+req = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
+req.body = { image_base64: b64, filename: "page.png", images: false }.to_json
+res = Net::HTTP.start(uri.hostname, uri.port, read_timeout: 120) { |h| h.request(req) }
+puts JSON.parse(res.body)["text"]
+```
+
+## ตัวอย่าง PowerShell
+
+```powershell
+# PowerShell 7+
+$j = Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/ocr" -Method Post -Form @{
+    file   = Get-Item "page.png"
+    scale  = "2"
+    images = "0"
+}
+$j.text
+```
+
+> PowerShell 5.1 ไม่มี `-Form` — ใช้ `curl.exe -F "file=@page.png" ...` แทน
 
 ## ข้อควรรู้
 

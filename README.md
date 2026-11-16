@@ -1,5 +1,7 @@
 # OpenThai2.0 OCR — Web UI + API
 
+**ไทย** | [English](README.en.md)
+
 หน้าเว็บอ่านข้อความไทย/อังกฤษจาก **รูปภาพและ PDF** ทำงานบนเครื่องตัวเอง (CPU) ใช้โมเดล
 [`iapp/OpenThai2.0-OCR-Text`](https://huggingface.co/iapp/OpenThai2.0-OCR-Text) (Apache-2.0)
 พร้อมหน้าเว็บภาษาไทย, วางภาพจาก clipboard, API JSON สำหรับเรียกจากโปรแกรมอื่น และ build เป็น exe ไฟล์เดียว
@@ -68,9 +70,12 @@ echo $res['text'];
 
 | ไฟล์ | เนื้อหา |
 |---|---|
-| [docs/USAGE.md](docs/USAGE.md) | คู่มือการใช้งาน + การปรับแต่งความแม่นยำ |
-| [docs/API.md](docs/API.md) | API reference + ตัวอย่างทุกภาษา |
-| [docs/BUILD.md](docs/BUILD.md) | build exe / release ทุก OS |
+| [docs/USAGE.md](docs/USAGE.md) | คู่มือการใช้งาน + การปรับแต่งความแม่นยำ (ไทย) |
+| [docs/USAGE.en.md](docs/USAGE.en.md) | User guide + accuracy tuning (English) |
+| [docs/API.md](docs/API.md) | API reference + ตัวอย่าง 8 ภาษา (ไทย) |
+| [docs/API.en.md](docs/API.en.md) | API reference + 8 language examples (English) |
+| [docs/BUILD.md](docs/BUILD.md) | build exe / release ทุก OS (ไทย) |
+| [docs/BUILD.en.md](docs/BUILD.en.md) | Build & release (English) |
 | [CHANGELOG.md](CHANGELOG.md) | ประวัติเวอร์ชัน |
 
 ## ข้อจำกัด

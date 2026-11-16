@@ -29,6 +29,8 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
   - linux-x64 `80ff2972…4ebbc`
   - macos-arm64 `3b11b1a4…684e7e`
 - tools/release-notes-patch.py (DEFAULT_REPO=makerwitawat/OpenThai2OCR) + download_models.py + smoke_test.py
+- เอกสาร 2 ภาษา: README/README.en, docs/USAGE(.en), docs/API(.en), docs/BUILD(.en)
+  + API ตัวอย่าง 8 ภาษา (PHP, Python, Node.js, C#, Java, Go, Ruby, PowerShell) ทั้งไทย/อังกฤษ
 
 ## Active
 - ไม่มี (งานรอบนี้จบเรียบร้อย) — exe ล่าสุด `dist/OpenThai2OCR.exe` 115.9MB พร้อมใช้
