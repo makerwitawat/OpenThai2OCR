@@ -124,3 +124,46 @@ API รองรับเครื่องอื่น (PHP ฯลฯ) → ธ�
 ## commit ล่าสุด
 - `3ad9b00` (feat(v1.2.0): line-level copy, DOCX export, watch folder, code signing)
 - version: 1.2.0 (ในโค้ด) — ยังไม่ tag/release
+
+## Session 4 (v1.2.0 — build exe + tag + ปล่อย release) — 2026-11-16
+
+## Objective
+ปิดงาน v1.2.0: build exe → ทดสอบ → tag `v1.2.0` → ปล่อย release → patch ตาราง SHA256
+
+## Completed
+- **build exe** `PyInstaller OpenThai2.0OCR.spec --clean` สำเร็จ (onefile, ฝังโมเดล) ~52 วิ
+- **ทดสอบ exe จริง** — ปลุก `dist\OpenThai2OCR.exe --no-browser --port 5199` → `/api/health`
+  (version 1.2.0, model_ready true) → อัปโหลดภาพไทย → OCR ได้ข้อความ → export
+  docx/txt/json/csv ครบ (docx ขึ้นต้น `PK`) · pytest 9/9 ผ่าน
+- **เจอ + แก้บั๊ก workflow** — `if: ... && secrets.WINDOWS_PFX_BASE64 != ''` ที่ระดับ step
+  ทำให้ workflow parse ไม่ผ่าน (secrets ใช้ใน `if` ไม่ได้) → ย้ายไป `env` ระดับ job
+  แล้วเช็ค `env.PFX_BASE64 != ''` (commit `0bc254d`)
+- **tag + release** — ลบ tag เดิมที่ชี้ commit เสีย, สร้าง tag ใหม่บน `0bc254d`, push
+  → CI release (win/linux/mac) + ci ผ่านทั้งหมด, GitHub Release `v1.2.0` มี 3 asset
+- **release notes** — `docs/release-notes-v1.2.0.md` + เติม SHA256 จริงทั้ง 3 asset →
+  `release-notes-patch.py` PATCH ผ่านภาษาไทย (ตรวจ `.checked` แล้ว)
+
+## ข้อควรระวังที่เจอ
+- `secrets.*` ใช้ใน `if` ของ step ไม่ได้ → ใช้ `env` ระดับ job แทน
+- exe ที่รันค้างทำให้ตัวใหม่เจอ "already running" แล้วเปิดเบราว์เซอร์เดิมแทนที่จะฟังพอร์ตใหม่
+  → ก่อนทดสอบต้อง `taskkill /T /F` ให้หมด
+- ภาพทดสอบที่ตัวอักษรถูกตัดขอบ (วาดล้น canvas) จะถูกทิ้งเป็น `invalid_thai` → ข้อความว่าง
+- `tools/release-notes-patch.py` เติม digest ของ `assets[0]` (บน GitHub เรียงตามชื่อ = linux)
+  → เขียนตาราง SHA เองก่อน แล้วปล่อยให้สคริปต์ PATCH body (regex เติมเฉพาะบรรทัด `SHA256:`)
+
+## Active
+- ไม่มี — v1.2.0 ปล่อยแล้ว
+
+## Blocked
+- code signing ยังไม่มีใบรับรองจริง (โครงพร้อม — ใส่ secret `WINDOWS_PFX_BASE64` +
+  `WINDOWS_PFX_PASSWORD` แล้วปล่อยรุ่นถัดไป)
+- อ่านภาพโดยตรงไม่ได้ (ต้องตรวจผ่านโค้ด/CLI/เบราว์เซอร์)
+
+## Next Move
+- ตั้ง secret เซ็นชื่อ (ถ้ามีใบรับรอง) แล้วปล่อย v1.2.1/1.3.0 เพื่อทดสอบขั้นเซ็นจริง
+- งานถัดไปที่ยังไม่มี: ทดสอบ watch folder กับไฟล์จริงในโฟลเดอร์ผู้ใช้, ปรับปรุงเอกสารตามฟีดแบ็ก
+
+## commit ล่าสุด
+- `0bc254d` (ci: fix secrets context in release signing step)
+- `b9ad450` (docs: add v1.2.0 release notes)
+- version: 1.2.0 — tag `v1.2.0` ปล่อยแล้ว (release id 446700332)
